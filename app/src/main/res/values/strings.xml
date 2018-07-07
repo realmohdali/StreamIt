@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">StreamIt</string>
+    <string name="whatNew">Recently Added</string>
+    <string name="more">More</string>
+    <string name="artist">Artists</string>
+    <string name="year">Year</string>
+    <string name="years">Years</string>
+    <string name="playerTitle">Media Player</string>
+</resources>
