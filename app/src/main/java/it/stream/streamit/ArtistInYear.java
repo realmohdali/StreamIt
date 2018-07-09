@@ -84,6 +84,9 @@ public class ArtistInYear extends AppCompatActivity {
     private RecyclerView mRecyclerView;
     private RecyclerView.Adapter mAdapter;
 
+
+    //Activity Life Cycle start
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -91,6 +94,104 @@ public class ArtistInYear extends AppCompatActivity {
 
         loadActivity();
         loadBottomSheet();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        trackTitle = preferences.getString("title", "");
+        trackSub = preferences.getString("sub", "");
+        trackImg = preferences.getString("img", "");
+        isLoading = preferences.getBoolean("loading", false);
+        playing = preferences.getBoolean("playing", false);
+        haveTrack = preferences.getBoolean("haveTrack", false);
+        currentTime = preferences.getInt("currentTime", 0);
+        currentStringTime = preferences.getString("currentStringTime", "");
+        duration = preferences.getString("duration", "");
+        intDuration = preferences.getInt("intDuration", 0);
+        loadPlayer();
+    }
+
+    @Override
+    protected void onDestroy() {
+        unregisterReceiver(playerPrepared);
+        unregisterReceiver(newAudio);
+        unregisterReceiver(buffering);
+        unregisterReceiver(bufferingEnd);
+        unregisterReceiver(paused);
+        unregisterReceiver(resume);
+        if (running) {
+            mHandler.removeCallbacks(mUpdateTimeTask);
+        }
+        writeData();
+        unbindService(serviceConnection);
+        super.onDestroy();
+    }
+
+    //Activity life cycle end
+
+    //Methods to load data on screen
+
+    private void loadActivity() {
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setDisplayShowHomeEnabled(true);
+        }
+
+        if (isOnline()) {
+
+            registerPlayerPrepared();
+            registerNewAudio();
+            registerBuffering();
+            registerBufferingEnd();
+            registerPaused();
+            registerResume();
+
+            Bundle bundle = getIntent().getExtras();
+            year = bundle.getString("year");
+            getSupportActionBar().setTitle(year);
+            y = year;
+            year = "year" + year;
+
+            //Bottom Sheet Stuff
+            pb = findViewById(R.id.play);
+            con = findViewById(R.id.control);
+            ct = findViewById(R.id.currentTitle);
+            st = findViewById(R.id.subtitle);
+            tt = findViewById(R.id.tackTitle);
+            ts = findViewById(R.id.trackSub);
+            iv1 = findViewById(R.id.img);
+            iv2 = findViewById(R.id.albumArt);
+            cp = findViewById(R.id.cTime);
+            du = findViewById(R.id.eTime);
+            mSeekBar = findViewById(R.id.seekBar);
+            loading = findViewById(R.id.loading);
+            loadingExp = findViewById(R.id.loadingExp);
+            intDuration = 0;
+            currentTime = 0;
+            isLoading = false;
+            trackTitle = "Track Title";
+            trackSub = "Artist | year";
+            trackImg = "";
+            haveTrack = false;
+            currentStringTime = "00:00";
+
+            Intent intent = new Intent(this, MediaPlayerService.class);
+            bindService(intent, serviceConnection, Context.BIND_ABOVE_CLIENT);
+
+            mRecyclerView = findViewById(R.id.artistInYear);
+            mRecyclerView.setHasFixedSize(true);
+            mRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
+
+            mList = new ArrayList<>();
+
+            loadData();
+        } else {
+            Snackbar sb = Snackbar.make(findViewById(R.id.mainLayout), "You are offline", Snackbar.LENGTH_INDEFINITE);
+            sb.setAction("Try Again", new ArtistInYear.TryAgain());
+            sb.show();
+        }
     }
 
     private void loadBottomSheet() {
@@ -182,66 +283,61 @@ public class ArtistInYear extends AppCompatActivity {
         });
     }
 
-    private void loadActivity() {
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setDisplayShowHomeEnabled(true);
-        }
+    private void loadData() {
+        final ProgressDialog progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("Loading data...");
+        progressDialog.setCancelable(false);
+        progressDialog.show();
 
-        if (isOnline()) {
+        StringRequest stringRequest = new StringRequest(Request.Method.POST,
+                URL,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        progressDialog.dismiss();
+                        try {
+                            JSONArray jsonArray = new JSONArray(response);
 
-            registerPlayerPrepared();
-            registerNewAudio();
-            registerBuffering();
-            registerBufferingEnd();
-            registerPaused();
-            registerResume();
+                            for (int i = 0; i < jsonArray.length(); i++) {
+                                JSONObject jsonObject = jsonArray.getJSONObject(i);
 
-            Bundle bundle = getIntent().getExtras();
-            year = bundle.getString("year");
-            getSupportActionBar().setTitle(year);
-            y = year;
-            year = "year" + year;
+                                String artist = jsonObject.getString("artist");
+                                String image = "http://realmohdali.000webhostapp.com/streamIt/";
+                                image += jsonObject.getString("image");
 
-            //Bottom Sheet Stuff
-            pb = findViewById(R.id.play);
-            con = findViewById(R.id.control);
-            ct = findViewById(R.id.currentTitle);
-            st = findViewById(R.id.subtitle);
-            tt = findViewById(R.id.tackTitle);
-            ts = findViewById(R.id.trackSub);
-            iv1 = findViewById(R.id.img);
-            iv2 = findViewById(R.id.albumArt);
-            cp = findViewById(R.id.cTime);
-            du = findViewById(R.id.eTime);
-            mSeekBar = findViewById(R.id.seekBar);
-            loading = findViewById(R.id.loading);
-            loadingExp = findViewById(R.id.loadingExp);
-            intDuration = 0;
-            currentTime = 0;
-            isLoading = false;
-            trackTitle = "Track Title";
-            trackSub = "Artist | year";
-            trackImg = "";
-            haveTrack = false;
-            currentStringTime = "00:00";
+                                ArtistInYearList li = new ArtistInYearList(artist, image);
+                                mList.add(li);
+                            }
 
-            Intent intent = new Intent(this, MediaPlayerService.class);
-            bindService(intent, serviceConnection, Context.BIND_ABOVE_CLIENT);
+                            mAdapter = new ArtistInYearAdapter(getApplicationContext(), mList, y);
+                            mRecyclerView.setAdapter(mAdapter);
 
-            mRecyclerView = findViewById(R.id.artistInYear);
-            mRecyclerView.setHasFixedSize(true);
-            mRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
 
-            mList = new ArrayList<>();
+            }
+        }) {
+            @Override
+            protected Map<String, String> getParams() {
 
-            loadData();
-        } else {
-            Snackbar sb = Snackbar.make(findViewById(R.id.mainLayout), "You are offline", Snackbar.LENGTH_INDEFINITE);
-            sb.setAction("Try Again", new ArtistInYear.TryAgain());
-            sb.show();
-        }
+                Map<String, String> params = new HashMap<>();
+                params.put("y", year);
+                return params;
+            }
+        };
+        stringRequest.setShouldCache(false);
+        RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
+        requestQueue.add(stringRequest);
     }
+
+    //Methods to load data on screen end
+
+    //Broadcast Receivers
 
     private BroadcastReceiver playerPrepared = new BroadcastReceiver() {
         @Override
@@ -348,71 +444,9 @@ public class ArtistInYear extends AppCompatActivity {
         registerReceiver(bufferingEnd, filter);
     }
 
-    private void loadData() {
-        final ProgressDialog progressDialog = new ProgressDialog(this);
-        progressDialog.setMessage("Loading data...");
-        progressDialog.setCancelable(false);
-        progressDialog.show();
+    //Broadcast Receivers end
 
-        StringRequest stringRequest = new StringRequest(Request.Method.POST,
-                URL,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        progressDialog.dismiss();
-                        try {
-                            JSONArray jsonArray = new JSONArray(response);
-
-                            for (int i = 0; i < jsonArray.length(); i++) {
-                                JSONObject jsonObject = jsonArray.getJSONObject(i);
-
-                                String artist = jsonObject.getString("artist");
-                                String image = "http://realmohdali.000webhostapp.com/streamIt/";
-                                image += jsonObject.getString("image");
-
-                                ArtistInYearList li = new ArtistInYearList(artist, image);
-                                mList.add(li);
-                            }
-
-                            mAdapter = new ArtistInYearAdapter(getApplicationContext(), mList, y);
-                            mRecyclerView.setAdapter(mAdapter);
-
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-
-            }
-        }) {
-            @Override
-            protected Map<String, String> getParams() {
-
-                Map<String, String> params = new HashMap<>();
-                params.put("y", year);
-                return params;
-            }
-        };
-        stringRequest.setShouldCache(false);
-        RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
-        requestQueue.add(stringRequest);
-    }
-
-    private ServiceConnection serviceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            MediaPlayerService.LocalBinder binder = (MediaPlayerService.LocalBinder) iBinder;
-            mediaPlayer = binder.getService();
-            serviceBound = true;
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            serviceBound = false;
-        }
-    };
+    //Loading and controlling media player
 
     public void playPause(View view) {
         if (serviceBound) {
@@ -431,66 +465,6 @@ public class ArtistInYear extends AppCompatActivity {
             Toast.makeText(getApplicationContext(), "Play some audio first", Toast.LENGTH_LONG).show();
         }
     }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            // Respond to the action bar's Up/Home button
-            case android.R.id.home:
-                if (expanded) {
-                    sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-                } else {
-                    writeData();
-                    finish();
-                    overridePendingTransition(0, 0);
-                    return true;
-                }
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (expanded) {
-            sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-        } else {
-            writeData();
-            finish();
-            overridePendingTransition(0, 0);
-            super.onBackPressed();
-        }
-    }
-
-    private boolean isOnline() {
-        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = cm.getActiveNetworkInfo();
-        return networkInfo != null && networkInfo.isConnected();
-    }
-
-    private class TryAgain implements View.OnClickListener {
-        @Override
-        public void onClick(View v) {
-            loadActivity();
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        trackTitle = preferences.getString("title", "");
-        trackSub = preferences.getString("sub", "");
-        trackImg = preferences.getString("img", "");
-        isLoading = preferences.getBoolean("loading", false);
-        playing = preferences.getBoolean("playing", false);
-        haveTrack = preferences.getBoolean("haveTrack", false);
-        currentTime = preferences.getInt("currentTime", 0);
-        currentStringTime = preferences.getString("currentStringTime", "");
-        duration = preferences.getString("duration", "");
-        intDuration = preferences.getInt("intDuration", 0);
-        loadPlayer();
-    }
-
     private void loadPlayer() {
         if (isLoading) {
             ct.setText(trackTitle);
@@ -591,6 +565,27 @@ public class ArtistInYear extends AppCompatActivity {
         }
     };
 
+
+    //Binding Service to the client
+
+    private ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            MediaPlayerService.LocalBinder binder = (MediaPlayerService.LocalBinder) iBinder;
+            mediaPlayer = binder.getService();
+            serviceBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            serviceBound = false;
+        }
+    };
+
+    //binding service end
+
+    //Method to manage Shared preferences
+
     private void writeData() {
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor editor = preferences.edit();
@@ -607,19 +602,47 @@ public class ArtistInYear extends AppCompatActivity {
         editor.apply();
     }
 
+    //Method to manage shared preferences end
+
     @Override
-    protected void onDestroy() {
-        unregisterReceiver(playerPrepared);
-        unregisterReceiver(newAudio);
-        unregisterReceiver(buffering);
-        unregisterReceiver(bufferingEnd);
-        unregisterReceiver(paused);
-        unregisterReceiver(resume);
-        if (running) {
-            mHandler.removeCallbacks(mUpdateTimeTask);
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            // Respond to the action bar's Up/Home button
+            case android.R.id.home:
+                if (expanded) {
+                    sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                } else {
+                    writeData();
+                    finish();
+                    overridePendingTransition(0, 0);
+                    return true;
+                }
         }
-        writeData();
-        unbindService(serviceConnection);
-        super.onDestroy();
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (expanded) {
+            sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+        } else {
+            writeData();
+            finish();
+            overridePendingTransition(0, 0);
+            super.onBackPressed();
+        }
+    }
+
+    private boolean isOnline() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = cm.getActiveNetworkInfo();
+        return networkInfo != null && networkInfo.isConnected();
+    }
+
+    private class TryAgain implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            loadActivity();
+        }
     }
 }

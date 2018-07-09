@@ -73,6 +73,8 @@ public class Years extends AppCompatActivity {
 
     BottomSheetBehavior sheetBehavior;
 
+    //Activity Life Cycle start
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -80,6 +82,87 @@ public class Years extends AppCompatActivity {
 
         loadActivity();
         loadBottomSheet();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        trackTitle = preferences.getString("title", "");
+        trackSub = preferences.getString("sub", "");
+        trackImg = preferences.getString("img", "");
+        isLoading = preferences.getBoolean("loading", false);
+        playing = preferences.getBoolean("playing", false);
+        haveTrack = preferences.getBoolean("haveTrack", false);
+        currentTime = preferences.getInt("currentTime", 0);
+        currentStringTime = preferences.getString("currentStringTime", "");
+        duration = preferences.getString("duration", "");
+        intDuration = preferences.getInt("intDuration", 0);
+        loadPlayer();
+    }
+
+    @Override
+    protected void onDestroy() {
+        unregisterReceiver(playerPrepared);
+        unregisterReceiver(newAudio);
+        unregisterReceiver(buffering);
+        unregisterReceiver(bufferingEnd);
+        unregisterReceiver(paused);
+        unregisterReceiver(resume);
+        if (running) {
+            mHandler.removeCallbacks(mUpdateTimeTask);
+        }
+        writeData();
+        unbindService(serviceConnection);
+        super.onDestroy();
+    }
+
+    //Activity life cycle end
+
+    //Methods to load data on screen
+
+    private void loadActivity() {
+
+        registerPlayerPrepared();
+        registerNewAudio();
+        registerBuffering();
+        registerBufferingEnd();
+        registerPaused();
+        registerResume();
+
+        //Bottom Sheet Stuff
+        pb = findViewById(R.id.play);
+        con = findViewById(R.id.control);
+        ct = findViewById(R.id.currentTitle);
+        st = findViewById(R.id.subtitle);
+        tt = findViewById(R.id.tackTitle);
+        ts = findViewById(R.id.trackSub);
+        iv1 = findViewById(R.id.img);
+        iv2 = findViewById(R.id.albumArt);
+        cp = findViewById(R.id.cTime);
+        du = findViewById(R.id.eTime);
+        mSeekBar = findViewById(R.id.seekBar);
+        loading = findViewById(R.id.loading);
+        loadingExp = findViewById(R.id.loadingExp);
+        intDuration = 0;
+        currentTime = 0;
+        isLoading = false;
+        trackTitle = "Track Title";
+        trackSub = "Artist | year";
+        trackImg = "";
+        haveTrack = false;
+        currentStringTime = "00:00";
+
+        Intent intent = new Intent(this, MediaPlayerService.class);
+        bindService(intent, serviceConnection, Context.BIND_ABOVE_CLIENT);
+
+        mRecyclerView = findViewById(R.id.yearView);
+        mRecyclerView.setHasFixedSize(true);
+        mRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
+
+        mYearList = new ArrayList<>();
+
+        loadData();
     }
 
     private void loadBottomSheet() {
@@ -171,54 +254,58 @@ public class Years extends AppCompatActivity {
         });
     }
 
-    private void loadActivity() {
+    private void loadData() {
+        final ProgressDialog mProgressDialog = new ProgressDialog(this);
+        mProgressDialog.setMessage("Loading Data...");
+        mProgressDialog.setCancelable(false);
+        mProgressDialog.show();
 
-        registerPlayerPrepared();
-        registerNewAudio();
-        registerBuffering();
-        registerBufferingEnd();
-        registerPaused();
-        registerResume();
+        StringRequest mStringRequest = new StringRequest(Request.Method.GET,
+                URL,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        try {
+                            mProgressDialog.dismiss();
+                            JSONArray mJsonArray = new JSONArray(response);
 
-        //Bottom Sheet Stuff
-        pb = findViewById(R.id.play);
-        con = findViewById(R.id.control);
-        ct = findViewById(R.id.currentTitle);
-        st = findViewById(R.id.subtitle);
-        tt = findViewById(R.id.tackTitle);
-        ts = findViewById(R.id.trackSub);
-        iv1 = findViewById(R.id.img);
-        iv2 = findViewById(R.id.albumArt);
-        cp = findViewById(R.id.cTime);
-        du = findViewById(R.id.eTime);
-        mSeekBar = findViewById(R.id.seekBar);
-        loading = findViewById(R.id.loading);
-        loadingExp = findViewById(R.id.loadingExp);
-        intDuration = 0;
-        currentTime = 0;
-        isLoading = false;
-        trackTitle = "Track Title";
-        trackSub = "Artist | year";
-        trackImg = "";
-        haveTrack = false;
-        currentStringTime = "00:00";
+                            for (int i = 0; i < mJsonArray.length(); i++) {
+                                JSONObject mJsonObject = mJsonArray.getJSONObject(i);
 
-        Intent intent = new Intent(this, MediaPlayerService.class);
-        bindService(intent, serviceConnection, Context.BIND_ABOVE_CLIENT);
+                                String year = mJsonObject.getString("year");
+                                String image = "http://realmohdali.000webhostapp.com/streamIt/";
+                                image += mJsonObject.getString("image");
 
-        mRecyclerView = findViewById(R.id.yearView);
-        mRecyclerView.setHasFixedSize(true);
-        mRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
+                                YearList li = new YearList(year, image);
+                                mYearList.add(li);
+                            }
 
-        mYearList = new ArrayList<>();
+                            mAdapter = new YearAdapter(getApplicationContext(), mYearList);
+                            mRecyclerView.setAdapter(mAdapter);
 
-        loadData();
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+
+                    }
+                });
+        RequestQueue mRequest = Volley.newRequestQueue(getApplicationContext());
+        mRequest.add(mStringRequest);
     }
+
+    //Methods to load data on screen end
+
+    //Broadcast Receivers
 
     private BroadcastReceiver playerPrepared = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            //String eTime = intent.getExtras().getString("eTime");
             duration = "";
             int millis = mediaPlayer.getDuration();
             int seconds = (millis / 1000) % 60;
@@ -320,50 +407,9 @@ public class Years extends AppCompatActivity {
         registerReceiver(resume, filter);
     }
 
-    private void loadData() {
-        final ProgressDialog mProgressDialog = new ProgressDialog(this);
-        mProgressDialog.setMessage("Loading Data...");
-        mProgressDialog.setCancelable(false);
-        mProgressDialog.show();
+    //Broadcast Receivers end
 
-        StringRequest mStringRequest = new StringRequest(Request.Method.GET,
-                URL,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        try {
-                            mProgressDialog.dismiss();
-                            JSONArray mJsonArray = new JSONArray(response);
-
-                            for (int i = 0; i < mJsonArray.length(); i++) {
-                                JSONObject mJsonObject = mJsonArray.getJSONObject(i);
-
-                                String year = mJsonObject.getString("year");
-                                String image = "http://realmohdali.000webhostapp.com/streamIt/";
-                                image += mJsonObject.getString("image");
-
-                                YearList li = new YearList(year, image);
-                                mYearList.add(li);
-                            }
-
-                            mAdapter = new YearAdapter(getApplicationContext(), mYearList);
-                            mRecyclerView.setAdapter(mAdapter);
-
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-
-                    }
-                },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-
-                    }
-                });
-        RequestQueue mRequest = Volley.newRequestQueue(getApplicationContext());
-        mRequest.add(mStringRequest);
-    }
+    //Loading and controlling media player
 
     public void playPause(View view) {
         if (serviceBound) {
@@ -381,66 +427,6 @@ public class Years extends AppCompatActivity {
         } else {
             Toast.makeText(getApplicationContext(), "Play some audio first", Toast.LENGTH_LONG).show();
         }
-    }
-
-    private ServiceConnection serviceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            MediaPlayerService.LocalBinder binder = (MediaPlayerService.LocalBinder) iBinder;
-            mediaPlayer = binder.getService();
-            serviceBound = true;
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            serviceBound = false;
-        }
-    };
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            // Respond to the action bar's Up/Home button
-            case android.R.id.home:
-                if (expanded) {
-                    sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-                } else {
-                    writeData();
-                    finish();
-                    overridePendingTransition(0, 0);
-                    return true;
-                }
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (expanded) {
-            sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-        } else {
-            writeData();
-            finish();
-            overridePendingTransition(0, 0);
-            super.onBackPressed();
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        trackTitle = preferences.getString("title", "");
-        trackSub = preferences.getString("sub", "");
-        trackImg = preferences.getString("img", "");
-        isLoading = preferences.getBoolean("loading", false);
-        playing = preferences.getBoolean("playing", false);
-        haveTrack = preferences.getBoolean("haveTrack", false);
-        currentTime = preferences.getInt("currentTime", 0);
-        currentStringTime = preferences.getString("currentStringTime", "");
-        duration = preferences.getString("duration", "");
-        intDuration = preferences.getInt("intDuration", 0);
-        loadPlayer();
     }
 
     private void loadPlayer() {
@@ -543,6 +529,26 @@ public class Years extends AppCompatActivity {
         }
     };
 
+    //Binding Service to the client
+
+    private ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            MediaPlayerService.LocalBinder binder = (MediaPlayerService.LocalBinder) iBinder;
+            mediaPlayer = binder.getService();
+            serviceBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            serviceBound = false;
+        }
+    };
+
+    //binding service end
+
+    //Method to manage Shared preferences
+
     private void writeData() {
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor editor = preferences.edit();
@@ -559,19 +565,35 @@ public class Years extends AppCompatActivity {
         editor.apply();
     }
 
+    //Method to manage shared preferences end
+
     @Override
-    protected void onDestroy() {
-        unregisterReceiver(playerPrepared);
-        unregisterReceiver(newAudio);
-        unregisterReceiver(buffering);
-        unregisterReceiver(bufferingEnd);
-        unregisterReceiver(paused);
-        unregisterReceiver(resume);
-        if (running) {
-            mHandler.removeCallbacks(mUpdateTimeTask);
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            // Respond to the action bar's Up/Home button
+            case android.R.id.home:
+                if (expanded) {
+                    sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                } else {
+                    writeData();
+                    finish();
+                    overridePendingTransition(0, 0);
+                    return true;
+                }
         }
-        writeData();
-        unbindService(serviceConnection);
-        super.onDestroy();
+        return super.onOptionsItemSelected(item);
     }
+
+    @Override
+    public void onBackPressed() {
+        if (expanded) {
+            sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+        } else {
+            writeData();
+            finish();
+            overridePendingTransition(0, 0);
+            super.onBackPressed();
+        }
+    }
+
 }

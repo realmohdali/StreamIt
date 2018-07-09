@@ -1,9 +1,6 @@
 package it.stream.streamit;
 
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
+
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -14,15 +11,12 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomSheetBehavior;
 import android.support.design.widget.Snackbar;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.NotificationManagerCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -32,7 +26,6 @@ import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
-import android.widget.RemoteViews;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -56,7 +49,6 @@ public class MainActivity extends AppCompatActivity {
 
     private RecyclerView mRecyclerView;
     private RecyclerView.Adapter mAdapter;
-    private LinearLayoutManager mLayoutManger;
     private List<ListItem> mListItems;
 
     private RecyclerView mArtistView;
@@ -72,7 +64,6 @@ public class MainActivity extends AppCompatActivity {
     private boolean serviceBound;
 
     //BottomSheetStuff
-    //private Button pb;
     private ImageButton pb;
     private ImageButton con;
     private TextView ct, st, tt, ts, cp, du;
@@ -89,14 +80,18 @@ public class MainActivity extends AppCompatActivity {
 
     BottomSheetBehavior sheetBehavior;
 
+    //URLs
     private static final String URL1 = "http://realmohdali.000webhostapp.com/streamIt/php_modules/whatsNewHome.php";
     private static final String URL2 = "http://realmohdali.000webhostapp.com/streamIt/php_modules/artistHome.php";
     private static final String URL3 = "http://realmohdali.000webhostapp.com/streamIt/php_modules/yearHome.php";
 
+    //Broadcast Strings
     private static final String Action_Play = "it.stream.streamit.ACTION_PLAY";
     private static final String Action_Pause = "it.stream.streamit.ACTION_PAUSE";
 
     private boolean doubleBackToExitPressedOnce = false;
+
+    //Activity Life Cycle start
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,25 +104,118 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void clearData() {
+    @Override
+    protected void onResume() {
+        super.onResume();
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putString("title", "Track Title");
-        editor.putString("sub", "Artist | Year");
-        editor.putString("img", "");
-        editor.putBoolean("loading", false);
-        editor.putBoolean("playing", false);
-        editor.putBoolean("haveTrack", false);
-        editor.putInt("currentTime", 0);
-        editor.putString("currentStringTime", "00:00");
-        editor.putInt("intDuration", 0);
-        editor.putString("duration", "00:00");
+        trackTitle = preferences.getString("title", "");
+        trackSub = preferences.getString("sub", "");
+        trackImg = preferences.getString("img", "");
+        isLoading = preferences.getBoolean("loading", false);
+        playing = preferences.getBoolean("playing", false);
+        haveTrack = preferences.getBoolean("haveTrack", false);
+        currentTime = preferences.getInt("currentTime", 0);
+        currentStringTime = preferences.getString("currentStringTime", "");
+        duration = preferences.getString("duration", "");
+        intDuration = preferences.getInt("intDuration", 0);
+        if (isOnline()) {
+            loadPlayer();
+        }
+    }
 
-        editor.apply();
+    @Override
+    protected void onPause() {
+        writeData();
+        super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        unregisterReceiver(newAudio);
+        unregisterReceiver(playerPrepared);
+        unregisterReceiver(bufferingUpdate);
+        unregisterReceiver(buffering);
+        unregisterReceiver(bufferingEnd);
+        unregisterReceiver(paused);
+        unregisterReceiver(resume);
+        clearData();
+        if (running) {
+            mHandler.removeCallbacks(mUpdateTimeTask);
+        }
+        unbindService(serviceConnection);
+        super.onDestroy();
+    }
+
+    //Activity life cycle end
+
+    //Methods to load data on screen
+
+    private void loadActivity() {
+        if (isOnline()) {
+
+            registerPlayerPrepared();
+            registerBufferingUpdate();
+            registerNewAudio();
+            registerBuffering();
+            registerBufferingEnd();
+            registerPaused();
+            registerResume();
+
+            //Bottom Sheet Stuff
+            pb = findViewById(R.id.play);
+            con = findViewById(R.id.control);
+            ct = findViewById(R.id.currentTitle);
+            st = findViewById(R.id.subtitle);
+            tt = findViewById(R.id.tackTitle);
+            ts = findViewById(R.id.trackSub);
+            iv1 = findViewById(R.id.img);
+            iv2 = findViewById(R.id.albumArt);
+            cp = findViewById(R.id.cTime);
+            du = findViewById(R.id.eTime);
+            mSeekBar = findViewById(R.id.seekBar);
+            loading = findViewById(R.id.loading);
+            loadingExp = findViewById(R.id.loadingExp);
+            intDuration = 0;
+            currentTime = 0;
+            isLoading = false;
+            trackTitle = "Track Title";
+            trackSub = "Artist | year";
+            trackImg = "";
+            haveTrack = false;
+            currentStringTime = "00:00";
+
+            Intent intent = new Intent(this, MediaPlayerService.class);
+            bindService(intent, serviceConnection, Context.BIND_ABOVE_CLIENT);
+
+            LinearLayoutManager mLayoutManger = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
+
+            mRecyclerView = findViewById(R.id.rv);
+            mRecyclerView.setHasFixedSize(true);
+            mRecyclerView.setLayoutManager(mLayoutManger);
+
+            mArtistView = findViewById(R.id.artistView);
+            mArtistView.setHasFixedSize(true);
+            mArtistView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+
+            mYearView = findViewById(R.id.yearView);
+            mYearView.setHasFixedSize(true);
+            mYearView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+
+
+            mListItems = new ArrayList<>();
+            mArtistList = new ArrayList<>();
+            mYearList = new ArrayList<>();
+
+            loadData();
+        } else {
+            Snackbar sb = Snackbar.make(findViewById(R.id.mainLayout), "You are offline", Snackbar.LENGTH_INDEFINITE);
+            sb.setAction("Try Again", new TryAgain());
+            sb.show();
+
+        }
     }
 
     private void loadBottomSheet() {
-        /**Bottom Sheet Stuff**/
 
         pb.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -217,132 +305,6 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
-    }
-
-    @Override
-    protected void onDestroy() {
-        unregisterReceiver(newAudio);
-        unregisterReceiver(playerPrepared);
-        unregisterReceiver(bufferingUpdate);
-        unregisterReceiver(buffering);
-        unregisterReceiver(bufferingEnd);
-        unregisterReceiver(paused);
-        unregisterReceiver(resume);
-        clearData();
-        if (running) {
-            mHandler.removeCallbacks(mUpdateTimeTask);
-        }
-        unbindService(serviceConnection);
-        super.onDestroy();
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (expanded) {
-            switch (item.getItemId()) {
-                case android.R.id.home:
-                    sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-            }
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (expanded) {
-            sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-        } else {
-            if (doubleBackToExitPressedOnce) {
-                clearData();
-                haveTrack = false;
-                if (serviceBound) {
-                    if (playing) {
-                        mediaPlayer.stopMedia();
-                        mediaPlayer.stopSelf();
-                    }
-                }
-                if(running) {
-                    mHandler.removeCallbacks(mUpdateTimeTask);
-                }
-                super.onBackPressed();
-                return;
-            }
-
-            this.doubleBackToExitPressedOnce = true;
-            Toast.makeText(this, "Please click BACK again to exit", Toast.LENGTH_SHORT).show();
-
-            new Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    doubleBackToExitPressedOnce = false;
-                }
-            }, 2000);
-        }
-    }
-
-    private void loadActivity() {
-        if (isOnline()) {
-
-            registerPlayerPrepared();
-            registerBufferingUpdate();
-            registerNewAudio();
-            registerBuffering();
-            registerBufferingEnd();
-            registerPaused();
-            registerResume();
-
-            //Bottom Sheet Stuff
-            pb = findViewById(R.id.play);
-            con = findViewById(R.id.control);
-            ct = findViewById(R.id.currentTitle);
-            st = findViewById(R.id.subtitle);
-            tt = findViewById(R.id.tackTitle);
-            ts = findViewById(R.id.trackSub);
-            iv1 = findViewById(R.id.img);
-            iv2 = findViewById(R.id.albumArt);
-            cp = findViewById(R.id.cTime);
-            du = findViewById(R.id.eTime);
-            mSeekBar = findViewById(R.id.seekBar);
-            loading = findViewById(R.id.loading);
-            loadingExp = findViewById(R.id.loadingExp);
-            intDuration = 0;
-            currentTime = 0;
-            isLoading = false;
-            trackTitle = "Track Title";
-            trackSub = "Artist | year";
-            trackImg = "";
-            haveTrack = false;
-            currentStringTime = "00:00";
-
-            Intent intent = new Intent(this, MediaPlayerService.class);
-            bindService(intent, serviceConnection, Context.BIND_ABOVE_CLIENT);
-
-            mLayoutManger = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
-
-            mRecyclerView = findViewById(R.id.rv);
-            mRecyclerView.setHasFixedSize(true);
-            mRecyclerView.setLayoutManager(mLayoutManger);
-
-            mArtistView = findViewById(R.id.artistView);
-            mArtistView.setHasFixedSize(true);
-            mArtistView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-
-            mYearView = findViewById(R.id.yearView);
-            mYearView.setHasFixedSize(true);
-            mYearView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-
-
-            mListItems = new ArrayList<>();
-            mArtistList = new ArrayList<>();
-            mYearList = new ArrayList<>();
-
-            loadData();
-        } else {
-            Snackbar sb = Snackbar.make(findViewById(R.id.mainLayout), "You are offline", Snackbar.LENGTH_INDEFINITE);
-            sb.setAction("Try Again", new TryAgain());
-            sb.show();
-
-        }
     }
 
     private void loadData() {
@@ -475,10 +437,30 @@ public class MainActivity extends AppCompatActivity {
         mRequest.add(mStringRequest);
     }
 
+    private void clearData() {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString("title", "Track Title");
+        editor.putString("sub", "Artist | Year");
+        editor.putString("img", "");
+        editor.putBoolean("loading", false);
+        editor.putBoolean("playing", false);
+        editor.putBoolean("haveTrack", false);
+        editor.putInt("currentTime", 0);
+        editor.putString("currentStringTime", "00:00");
+        editor.putInt("intDuration", 0);
+        editor.putString("duration", "00:00");
+
+        editor.apply();
+    }
+
+    //Methods to load data on screen end
+
+    //Broadcast Receivers
+
     private BroadcastReceiver playerPrepared = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            //String eTime = intent.getExtras().getString("eTime");
             duration = "";
             int millis = mediaPlayer.getDuration();
             int seconds = (millis / 1000) % 60;
@@ -598,6 +580,10 @@ public class MainActivity extends AppCompatActivity {
         registerReceiver(resume, filter);
     }
 
+    //Broadcast Receivers end
+
+    //Loading and controlling media player
+
     public void playPause(View view) {
         if (serviceBound) {
             if (playing) {
@@ -613,83 +599,6 @@ public class MainActivity extends AppCompatActivity {
             }
         } else {
             Toast.makeText(getApplicationContext(), "Play some audio first", Toast.LENGTH_LONG).show();
-        }
-    }
-
-    /**
-     * binding the client to the audio player service
-     */
-
-    private ServiceConnection serviceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            //we're bound to local service cast the IBinder and get LocalService instance
-            MediaPlayerService.LocalBinder binder = (MediaPlayerService.LocalBinder) iBinder;
-            mediaPlayer = binder.getService();
-            serviceBound = true;
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            serviceBound = false;
-        }
-    };
-
-
-    public void whatsNew(View view) {
-        if (isOnline()) {
-            Intent mIntent = new Intent(this, WhatsNew.class);
-            startActivity(mIntent);
-            overridePendingTransition(0, 0);
-        }
-    }
-
-    public void allArtists(View view) {
-        if (isOnline()) {
-            Intent mIntent = new Intent(this, Artists.class);
-            startActivity(mIntent);
-            overridePendingTransition(0, 0);
-        }
-    }
-
-    public void allYears(View view) {
-        if (isOnline()) {
-            Intent mIntent = new Intent(this, Years.class);
-            startActivity(mIntent);
-            overridePendingTransition(0, 0);
-        }
-    }
-
-    private boolean isOnline() {
-        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = cm.getActiveNetworkInfo();
-        return networkInfo != null && networkInfo.isConnected();
-    }
-
-
-    private class TryAgain implements View.OnClickListener {
-        @Override
-        public void onClick(View v) {
-            loadActivity();
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        trackTitle = preferences.getString("title", "");
-        trackSub = preferences.getString("sub", "");
-        trackImg = preferences.getString("img", "");
-        isLoading = preferences.getBoolean("loading", false);
-        playing = preferences.getBoolean("playing", false);
-        haveTrack = preferences.getBoolean("haveTrack", false);
-        currentTime = preferences.getInt("currentTime", 0);
-        currentStringTime = preferences.getString("currentStringTime", "");
-        duration = preferences.getString("duration", "");
-        intDuration = preferences.getInt("intDuration", 0);
-        if (isOnline()) {
-            loadPlayer();
         }
     }
 
@@ -795,13 +704,56 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    @Override
-    protected void onPause() {
-        writeData();
-        super.onPause();
+
+    //Binding Service to the client
+
+    private ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            //we're bound to local service cast the IBinder and get LocalService instance
+            MediaPlayerService.LocalBinder binder = (MediaPlayerService.LocalBinder) iBinder;
+            mediaPlayer = binder.getService();
+            serviceBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            serviceBound = false;
+        }
+    };
+
+    //binding service end
+
+    //methods to add click listeners to more buttons
+    public void whatsNew(View view) {
+        if (isOnline()) {
+            Intent mIntent = new Intent(this, WhatsNew.class);
+            startActivity(mIntent);
+            overridePendingTransition(0, 0);
+        }
     }
 
-    private void writeData(){
+    public void allArtists(View view) {
+        if (isOnline()) {
+            Intent mIntent = new Intent(this, Artists.class);
+            startActivity(mIntent);
+            overridePendingTransition(0, 0);
+        }
+    }
+
+    public void allYears(View view) {
+        if (isOnline()) {
+            Intent mIntent = new Intent(this, Years.class);
+            startActivity(mIntent);
+            overridePendingTransition(0, 0);
+        }
+    }
+
+    //methods to add click listeners to more buttons end
+
+    //Method to manage Shared preferences
+
+    private void writeData() {
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor editor = preferences.edit();
         editor.putString("title", trackTitle);
@@ -815,6 +767,65 @@ public class MainActivity extends AppCompatActivity {
         editor.putInt("intDuration", intDuration);
         editor.putString("duration", duration);
         editor.apply();
+    }
+
+    //Method to manage shared preferences end
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (expanded) {
+            switch (item.getItemId()) {
+                case android.R.id.home:
+                    sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+            }
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (expanded) {
+            sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+        } else {
+            if (doubleBackToExitPressedOnce) {
+                clearData();
+                haveTrack = false;
+                if (serviceBound) {
+                    mediaPlayer.stopMedia();
+                    mediaPlayer.stopSelf();
+                }
+                if (running) {
+                    mHandler.removeCallbacks(mUpdateTimeTask);
+                }
+                super.onBackPressed();
+                return;
+            }
+
+            this.doubleBackToExitPressedOnce = true;
+            Toast.makeText(this, "Please click BACK again to exit", Toast.LENGTH_SHORT).show();
+
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    doubleBackToExitPressedOnce = false;
+                }
+            }, 2000);
+        }
+    }
+
+
+    private boolean isOnline() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = cm.getActiveNetworkInfo();
+        return networkInfo != null && networkInfo.isConnected();
+    }
+
+
+    private class TryAgain implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            loadActivity();
+        }
     }
 
 }
