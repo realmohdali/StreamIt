@@ -42,7 +42,9 @@
                 android:ellipsize="end"
                 android:gravity="center"
                 android:maxLines="1"
-                android:text="India"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
+                android:text="India is a new country here"
                 android:textColor="@color/colorWhite" />
 
 

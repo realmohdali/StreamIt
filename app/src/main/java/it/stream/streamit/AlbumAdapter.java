@@ -20,6 +20,10 @@ import com.google.gson.Gson;
 
 import java.util.List;
 
+import jp.wasabeef.glide.transformations.RoundedCornersTransformation;
+
+import static com.bumptech.glide.request.RequestOptions.bitmapTransform;
+
 class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> {
 
     public static final String Broadcast_PLAY_NEW_AUDIO = "it.stream.streamit.PlayNewAudio";
@@ -65,6 +69,7 @@ class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> {
         Glide.with(mContext)
                 .asBitmap()
                 .load(mList.get(i).getImageUrl())
+                .apply(bitmapTransform(new RoundedCornersTransformation(5,0, RoundedCornersTransformation.CornerType.ALL)))
                 .into(viewHolder.iv);
 
         viewHolder.cv.setOnClickListener(new View.OnClickListener() {

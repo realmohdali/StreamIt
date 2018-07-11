@@ -25,6 +25,10 @@ import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.List;
 
+import jp.wasabeef.glide.transformations.RoundedCornersTransformation;
+
+import static com.bumptech.glide.request.RequestOptions.bitmapTransform;
+
 public class RecentHomeAdapter extends RecyclerView.Adapter<RecentHomeAdapter.ViewHolder> {
 
     private List<ListItem> mListItems;
@@ -68,6 +72,7 @@ public class RecentHomeAdapter extends RecyclerView.Adapter<RecentHomeAdapter.Vi
         Glide.with(mContext)
                 .asBitmap()
                 .load(mListItems.get(i).getImageUrl())
+                .apply(bitmapTransform(new RoundedCornersTransformation(5,0, RoundedCornersTransformation.CornerType.ALL)))
                 .into(viewHolder.iv);
         viewHolder.t.setText(mListItems.get(i).getTitle());
 
