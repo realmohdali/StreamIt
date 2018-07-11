@@ -26,8 +26,10 @@ import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.view.View;
 import android.widget.RemoteViews;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
@@ -84,8 +86,8 @@ public class MediaPlayerService extends Service
     public static final String New_Audio = "it.stream.streamit.NewAudio";
     public static final String Buffering = "it.stream.streamit.Buffering";
     public static final String buffering_End = "it.stream.streamit.bufferingEnd";
-    public static final String Action_Play="it.stream.streamit.ACTION_PLAY";
-    public static final String Action_Pause="it.stream.streamit.ACTION_PAUSE";
+    public static final String Action_Play = "it.stream.streamit.ACTION_PLAY";
+    public static final String Action_Pause = "it.stream.streamit.ACTION_PAUSE";
 
     /*
     Notification Stuff
@@ -98,41 +100,46 @@ public class MediaPlayerService extends Service
         Paused,
         Loading
     }
+
     Bitmap bitmap;
 
     private void showNotif(Status status) {
+        boolean Flag_Sticky = true;
         Intent intent;
         PendingIntent pendingIntent;
-        RemoteViews remoteViews=new RemoteViews(getPackageName(),R.layout.notification_view);
-        remoteViews.setTextViewText(R.id.notificationTitle,title);
-        remoteViews.setTextViewText(R.id.notificationSubtitle,sub);
+        RemoteViews remoteViews = new RemoteViews(getPackageName(), R.layout.notification_view);
+        remoteViews.setTextViewText(R.id.notificationTitle, title);
+        remoteViews.setTextViewText(R.id.notificationSubtitle, sub);
         switch (status) {
             case Playing:
-                intent=new Intent(Action_Pause);
-                pendingIntent=PendingIntent.getBroadcast(this,0,intent,0);
-                remoteViews.setOnClickPendingIntent(R.id.notificationButton,pendingIntent);
-                remoteViews.setViewVisibility(R.id.notificationProgress,View.GONE);
-                remoteViews.setViewVisibility(R.id.notificationButton,View.VISIBLE);
-                remoteViews.setImageViewResource(R.id.notificationButton,R.drawable.ic_pause_white_24dp);
+                intent = new Intent(Action_Pause);
+                pendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
+                remoteViews.setOnClickPendingIntent(R.id.notificationButton, pendingIntent);
+                remoteViews.setViewVisibility(R.id.notificationProgress, View.GONE);
+                remoteViews.setViewVisibility(R.id.notificationButton, View.VISIBLE);
+                remoteViews.setImageViewResource(R.id.notificationButton, R.drawable.new_pause_icon);
+                Flag_Sticky = true;
                 break;
             case Paused:
-                intent=new Intent(Action_Play);
-                pendingIntent=PendingIntent.getBroadcast(this,0,intent,0);
-                remoteViews.setOnClickPendingIntent(R.id.notificationButton,pendingIntent);
-                remoteViews.setViewVisibility(R.id.notificationProgress,View.GONE);
-                remoteViews.setViewVisibility(R.id.notificationButton,View.VISIBLE);
-                remoteViews.setImageViewResource(R.id.notificationButton,R.drawable.ic_play_arrow_white_24dp);
+                intent = new Intent(Action_Play);
+                pendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
+                remoteViews.setOnClickPendingIntent(R.id.notificationButton, pendingIntent);
+                remoteViews.setViewVisibility(R.id.notificationProgress, View.GONE);
+                remoteViews.setViewVisibility(R.id.notificationButton, View.VISIBLE);
+                remoteViews.setImageViewResource(R.id.notificationButton, R.drawable.new_play_arrow);
+                Flag_Sticky = false;
                 break;
             case Loading:
                 remoteViews.setViewVisibility(R.id.notificationButton, View.GONE);
-                remoteViews.setViewVisibility(R.id.notificationProgress,View.VISIBLE);
+                remoteViews.setViewVisibility(R.id.notificationProgress, View.VISIBLE);
+                Flag_Sticky = true;
                 break;
         }
 
 
         new getBitmapFromURL().execute(img);
 
-        NotificationCompat.Builder mBuilder=new NotificationCompat.Builder(this,"default")
+        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this, "default")
                 .setSmallIcon(R.drawable.ic_notifiction_icon)
                 .setLargeIcon(bitmap)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -140,10 +147,10 @@ public class MediaPlayerService extends Service
                 .setContent(remoteViews)
                 .setCustomContentView(remoteViews)
                 .setPriority(Notification.PRIORITY_MAX)
-                .setOngoing(true);
+                .setOngoing(Flag_Sticky);
 
-        notificationManagerCompat=NotificationManagerCompat.from(this);
-        notificationManagerCompat.notify(100,mBuilder.build());
+        notificationManagerCompat = NotificationManagerCompat.from(this);
+        notificationManagerCompat.notify(100, mBuilder.build());
     }
 
     private void createNotificationChannel() {
@@ -162,26 +169,28 @@ public class MediaPlayerService extends Service
         }
     }
 
-    private BroadcastReceiver notificationPlay=new BroadcastReceiver() {
+    private BroadcastReceiver notificationPlay = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             resumeMedia();
         }
     };
-    private void registerNotificationPlay(){
-        IntentFilter intentFilter=new IntentFilter(this.Action_Play);
-        registerReceiver(notificationPlay,intentFilter);
+
+    private void registerNotificationPlay() {
+        IntentFilter intentFilter = new IntentFilter(this.Action_Play);
+        registerReceiver(notificationPlay, intentFilter);
     }
 
-    private BroadcastReceiver notificationPause=new BroadcastReceiver() {
+    private BroadcastReceiver notificationPause = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             pauseMedia();
         }
     };
-    private void registerNotificationPause(){
-        IntentFilter intentFilter=new IntentFilter(this.Action_Pause);
-        registerReceiver(notificationPause,intentFilter);
+
+    private void registerNotificationPause() {
+        IntentFilter intentFilter = new IntentFilter(this.Action_Pause);
+        registerReceiver(notificationPause, intentFilter);
     }
 
     /*/
@@ -539,7 +548,7 @@ public class MediaPlayerService extends Service
 
     public void stopMedia() {
         if (mediaPlayer == null) return;
-        else{
+        else {
             mediaPlayer.stop();
             mediaPlayer.release();
         }
@@ -552,7 +561,7 @@ public class MediaPlayerService extends Service
 
             showNotif(Status.Paused);
 
-            Intent intent=new Intent(Action_Pause);
+            Intent intent = new Intent(Action_Pause);
             sendBroadcast(intent);
 
             SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -569,7 +578,7 @@ public class MediaPlayerService extends Service
 
             showNotif(Status.Playing);
 
-            Intent intent=new Intent(Action_Play);
+            Intent intent = new Intent(Action_Play);
             sendBroadcast(intent);
 
             SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -663,7 +672,7 @@ public class MediaPlayerService extends Service
         }
     }
 
-    private class getBitmapFromURL extends AsyncTask<String,Void,Bitmap>{
+    private class getBitmapFromURL extends AsyncTask<String, Void, Bitmap> {
 
         @Override
         protected Bitmap doInBackground(String... strings) {
@@ -674,9 +683,9 @@ public class MediaPlayerService extends Service
                 connection.connect();
                 InputStream input = connection.getInputStream();
                 Bitmap myBitmap = BitmapFactory.decodeStream(input);
-                bitmap=Bitmap.createScaledBitmap(myBitmap,64,64,false);
+                bitmap = Bitmap.createScaledBitmap(myBitmap, 64, 64, false);
                 return myBitmap;
-            }catch (IOException e){
+            } catch (IOException e) {
                 return null;
             }
         }

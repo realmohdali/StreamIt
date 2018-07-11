@@ -15,6 +15,10 @@ import com.bumptech.glide.Glide;
 
 import java.util.List;
 
+import jp.wasabeef.glide.transformations.RoundedCornersTransformation;
+
+import static com.bumptech.glide.request.RequestOptions.bitmapTransform;
+
 class ArtistInYearAdapter extends RecyclerView.Adapter<ArtistInYearAdapter.ViewHolder> {
 
     private Context mContext;
@@ -42,6 +46,7 @@ class ArtistInYearAdapter extends RecyclerView.Adapter<ArtistInYearAdapter.ViewH
         Glide.with(mContext)
                 .asBitmap()
                 .load(mList.get(i).getImageUrl())
+                .apply(bitmapTransform(new RoundedCornersTransformation(5,0, RoundedCornersTransformation.CornerType.ALL)))
                 .into(viewHolder.iv);
 
         viewHolder.cv.setOnClickListener(new View.OnClickListener() {
