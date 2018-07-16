@@ -6,8 +6,8 @@ android {
         applicationId "it.stream.streamit"
         minSdkVersion 14
         targetSdkVersion 28
-        versionCode 10
-        versionName "0.10 Alpha"
+        versionCode 11
+        versionName "0.11 Alpha"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
