@@ -46,7 +46,7 @@
                     android:onClick="whatsNew"
                     android:padding="5dp"
                     android:text="@string/more"
-                    android:textColor="@color/colorWhite" />
+                    android:textColor="@color/colorGreen" />
 
             </LinearLayout>
 
@@ -79,7 +79,7 @@
                     android:onClick="allArtists"
                     android:padding="5dp"
                     android:text="@string/more"
-                    android:textColor="@color/colorWhite" />
+                    android:textColor="@color/colorGreen" />
 
             </LinearLayout>
 
@@ -112,7 +112,7 @@
                     android:onClick="allYears"
                     android:padding="5dp"
                     android:text="@string/more"
-                    android:textColor="@color/colorWhite" />
+                    android:textColor="@color/colorGreen" />
 
             </LinearLayout>
 

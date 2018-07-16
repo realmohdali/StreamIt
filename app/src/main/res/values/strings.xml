@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Matam</string>
     <string name="whatNew">Recently Added</string>
-    <string name="more">More</string>
+    <string name="more">MORE</string>
     <string name="artist">Artists</string>
     <string name="year">Year</string>
     <string name="years">Years</string>
