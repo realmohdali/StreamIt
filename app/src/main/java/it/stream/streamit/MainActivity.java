@@ -1,6 +1,7 @@
 package it.stream.streamit;
 
 
+import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -9,14 +10,18 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomSheetBehavior;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -74,11 +79,21 @@ public class MainActivity extends AppCompatActivity {
     private int intDuration, currentTime;
     private boolean isLoading, haveTrack;
     private String duration, trackTitle, trackSub, trackImg, currentStringTime;
+    private ProgressBar mProgressBar;
+    private ImageButton repeat;
+    private ImageButton fav;
+    private boolean isFav;
+    private int loopStatus;
 
     private Handler mHandler;
     private boolean running = false;
 
     BottomSheetBehavior sheetBehavior;
+
+    //Loop strings
+    private static final int noLoop = 1;
+    private static final int loopAll = 2;
+    private static final int loopOne = 3;
 
     //URLs
     private static final String URL1 = "http://realmohdali.000webhostapp.com/streamIt/php_modules/whatsNewHome.php";
@@ -91,12 +106,18 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean doubleBackToExitPressedOnce = false;
 
+    //Permission Request constants
+    private static final int MY_PERMISSION_REQUEST_READ_PHONE_STATE = 1;
+    private static final int MY_PERMISSION_REQUEST_ACCESS_NETWORK_STATE = 2;
+    private static final int MY_PERMISSION_REQUEST_INTERNET = 3;
+
     //Activity Life Cycle start
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        checkPermissions();
         clearData();
         loadActivity();
         if (isOnline()) {
@@ -118,6 +139,7 @@ public class MainActivity extends AppCompatActivity {
         currentStringTime = preferences.getString("currentStringTime", "");
         duration = preferences.getString("duration", "");
         intDuration = preferences.getInt("intDuration", 0);
+        loopStatus = preferences.getInt("loop", 0);
         if (isOnline()) {
             loadPlayer();
         }
@@ -183,6 +205,11 @@ public class MainActivity extends AppCompatActivity {
             trackImg = "";
             haveTrack = false;
             currentStringTime = "00:00";
+            mProgressBar = findViewById(R.id.progressBar);
+            repeat = findViewById(R.id.repeat);
+            fav = findViewById(R.id.fav);
+            isFav = false;
+            loopStatus = 0;
 
             Intent intent = new Intent(this, MediaPlayerService.class);
             bindService(intent, serviceConnection, Context.BIND_ABOVE_CLIENT);
@@ -269,6 +296,40 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        repeat.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                    if (repeat.getMinimumHeight() == noLoop) {
+                        repeat.setImageResource(R.drawable.ic_repeat_green_24dp);
+                        repeat.setMinimumHeight(2);
+                        loopStatus = 2;
+                    } else if (repeat.getMinimumHeight() == loopAll) {
+                        repeat.setImageResource(R.drawable.ic_repeat_one_green_24dp);
+                        repeat.setMinimumHeight(3);
+                        loopStatus = 3;
+                    } else if (repeat.getMinimumHeight() == loopOne) {
+                        repeat.setImageResource(R.drawable.ic_repeat_white_24dp);
+                        repeat.setMinimumHeight(1);
+                        loopStatus = 1;
+                    }
+                }
+            }
+        });
+
+        fav.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (isFav) {
+                    fav.setImageResource(R.drawable.ic_favorite_border_white_24dp);
+                    isFav = false;
+                } else {
+                    fav.setImageResource(R.drawable.ic_favorite_green_24dp);
+                    isFav = true;
+                }
+            }
+        });
+
         sheetBehavior = BottomSheetBehavior.from(findViewById(R.id.bottom_sheet));
         expanded = false;
 
@@ -284,6 +345,7 @@ public class MainActivity extends AppCompatActivity {
                         getSupportActionBar().setDisplayShowHomeEnabled(true);
                         getSupportActionBar().setTitle(R.string.playerTitle);
                         expanded = true;
+                        findViewById(R.id.btmSheet).setVisibility(View.GONE);
                         break;
                     case BottomSheetBehavior.STATE_COLLAPSED:
                         getSupportActionBar().setDisplayHomeAsUpEnabled(false);
@@ -292,6 +354,7 @@ public class MainActivity extends AppCompatActivity {
                         expanded = false;
                         break;
                     case BottomSheetBehavior.STATE_DRAGGING:
+                        findViewById(R.id.btmSheet).setVisibility(View.VISIBLE);
                         break;
                     case BottomSheetBehavior.STATE_SETTLING:
                         break;
@@ -300,6 +363,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onSlide(@NonNull View bottomSheet, float slideOffset) {
+                findViewById(R.id.btmSheet).setVisibility(View.VISIBLE);
                 float x = 1 - slideOffset;
                 findViewById(R.id.btmSheet).setAlpha(x);
 
@@ -626,12 +690,22 @@ public class MainActivity extends AppCompatActivity {
             loadingExp.setVisibility(View.VISIBLE);
             mSeekBar.setEnabled(false);
         } else {
-
             ct.setText(trackTitle);
             st.setText(trackSub);
             tt.setText(trackTitle);
             ts.setText(trackSub);
             du.setText(duration);
+
+            if (loopStatus == noLoop) {
+                repeat.setImageResource(R.drawable.ic_repeat_white_24dp);
+                repeat.setMinimumHeight(1);
+            } else if (loopStatus == loopAll) {
+                repeat.setImageResource(R.drawable.ic_repeat_green_24dp);
+                repeat.setMinimumHeight(2);
+            } else if (loopStatus == loopOne) {
+                repeat.setImageResource(R.drawable.ic_repeat_one_green_24dp);
+                repeat.setMinimumHeight(3);
+            }
 
             if (haveTrack) {
                 Glide.with(this)
@@ -642,9 +716,13 @@ public class MainActivity extends AppCompatActivity {
                         .asBitmap()
                         .load(trackImg)
                         .into(iv2);
+                mProgressBar.setMax(intDuration);
             } else {
-                iv1.setImageResource(R.drawable.ic_launcher_background);
-                iv2.setImageResource(R.drawable.ic_launcher_background);
+                iv1.setImageResource(R.drawable.player_background);
+                iv2.setImageResource(R.drawable.player_background);
+                mProgressBar.setMax(100);
+                mProgressBar.setProgress(100);
+
             }
 
             mSeekBar.setMax(intDuration);
@@ -667,6 +745,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (haveTrack) {
                 mSeekBar.setProgress(currentTime);
+                mProgressBar.setProgress(currentTime);
                 cp.setText(currentStringTime);
                 mHandler = new Handler();
                 mHandler.postDelayed(mUpdateTimeTask, 100);
@@ -700,6 +779,7 @@ public class MainActivity extends AppCompatActivity {
 
                 mHandler.postDelayed(this, 100);
                 mSeekBar.setProgress(mediaPlayer.getCurrentPosition());
+                mProgressBar.setProgress(mediaPlayer.getCurrentPosition());
             }
         }
     };
@@ -766,6 +846,7 @@ public class MainActivity extends AppCompatActivity {
         editor.putString("currentStringTime", currentStringTime);
         editor.putInt("intDuration", intDuration);
         editor.putString("duration", duration);
+        editor.putInt("loop", loopStatus);
         editor.apply();
     }
 
@@ -828,4 +909,53 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    //Check for permission
+    private void checkPermissions() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_PHONE_STATE}, MY_PERMISSION_REQUEST_READ_PHONE_STATE);
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_NETWORK_STATE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_NETWORK_STATE}, MY_PERMISSION_REQUEST_ACCESS_NETWORK_STATE);
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.INTERNET}, MY_PERMISSION_REQUEST_INTERNET);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode) {
+            case MY_PERMISSION_REQUEST_READ_PHONE_STATE:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    //Permission granted
+                } else {
+                    //Permission denied
+                    Toast.makeText(this, "Please grant the permission or/nThe app will crash when you receive a phone call", Toast.LENGTH_LONG).show();
+                    checkPermissions();
+                }
+                break;
+            case MY_PERMISSION_REQUEST_ACCESS_NETWORK_STATE:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    //Permission granted
+                } else {
+                    //Permission denied
+                    Toast.makeText(this, "Please grant the permission or/nThe app will crash", Toast.LENGTH_LONG).show();
+                    checkPermissions();
+                }
+                break;
+            case MY_PERMISSION_REQUEST_INTERNET:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    //Permission granted
+                } else {
+                    //Permission denied
+                    Toast.makeText(this, "Please grant the permission or/nThe app will crash", Toast.LENGTH_LONG).show();
+                    checkPermissions();
+                }
+                break;
+            default:
+        }
+    }
+
+    //Check for permission end
 }

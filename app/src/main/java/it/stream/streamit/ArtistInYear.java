@@ -11,6 +11,7 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
@@ -75,11 +76,21 @@ public class ArtistInYear extends AppCompatActivity {
     private int intDuration, currentTime;
     private boolean isLoading, haveTrack;
     private String duration, trackTitle, trackSub, trackImg, currentStringTime;
+    private ProgressBar mProgressBar;
+    private ImageButton repeat;
+    private ImageButton fav;
+    private boolean isFav;
+    private int loopStatus;
 
     private Handler mHandler;
     private boolean running = false;
 
     BottomSheetBehavior sheetBehavior;
+
+    //Loop strings
+    private static final int noLoop=1;
+    private static final int loopAll=2;
+    private static final int loopOne=3;
 
     private RecyclerView mRecyclerView;
     private RecyclerView.Adapter mAdapter;
@@ -97,6 +108,12 @@ public class ArtistInYear extends AppCompatActivity {
     }
 
     @Override
+    protected void onPause() {
+        writeData();
+        super.onPause();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -110,6 +127,7 @@ public class ArtistInYear extends AppCompatActivity {
         currentStringTime = preferences.getString("currentStringTime", "");
         duration = preferences.getString("duration", "");
         intDuration = preferences.getInt("intDuration", 0);
+        loopStatus = preferences.getInt("loop", 0);
         loadPlayer();
     }
 
@@ -117,6 +135,7 @@ public class ArtistInYear extends AppCompatActivity {
     protected void onDestroy() {
         unregisterReceiver(playerPrepared);
         unregisterReceiver(newAudio);
+        unregisterReceiver(bufferingUpdate);
         unregisterReceiver(buffering);
         unregisterReceiver(bufferingEnd);
         unregisterReceiver(paused);
@@ -143,6 +162,7 @@ public class ArtistInYear extends AppCompatActivity {
 
             registerPlayerPrepared();
             registerNewAudio();
+            registerBufferingUpdate();
             registerBuffering();
             registerBufferingEnd();
             registerPaused();
@@ -176,6 +196,11 @@ public class ArtistInYear extends AppCompatActivity {
             trackImg = "";
             haveTrack = false;
             currentStringTime = "00:00";
+            mProgressBar=findViewById(R.id.progressBar);
+            repeat=findViewById(R.id.repeat);
+            fav=findViewById(R.id.fav);
+            isFav=false;
+            loopStatus = 0;
 
             Intent intent = new Intent(this, MediaPlayerService.class);
             bindService(intent, serviceConnection, Context.BIND_ABOVE_CLIENT);
@@ -249,6 +274,40 @@ public class ArtistInYear extends AppCompatActivity {
             }
         });
 
+        repeat.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                    if (repeat.getMinimumHeight() == noLoop) {
+                        repeat.setImageResource(R.drawable.ic_repeat_green_24dp);
+                        repeat.setMinimumHeight(2);
+                        loopStatus = 2;
+                    } else if (repeat.getMinimumHeight() == loopAll) {
+                        repeat.setImageResource(R.drawable.ic_repeat_one_green_24dp);
+                        repeat.setMinimumHeight(3);
+                        loopStatus = 3;
+                    } else if (repeat.getMinimumHeight() == loopOne) {
+                        repeat.setImageResource(R.drawable.ic_repeat_white_24dp);
+                        repeat.setMinimumHeight(1);
+                        loopStatus = 1;
+                    }
+                }
+            }
+        });
+
+        fav.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(isFav){
+                    fav.setImageResource(R.drawable.ic_favorite_border_white_24dp);
+                    isFav=false;
+                }else{
+                    fav.setImageResource(R.drawable.ic_favorite_green_24dp);
+                    isFav=true;
+                }
+            }
+        });
+
         sheetBehavior = BottomSheetBehavior.from(findViewById(R.id.bottom_sheet));
         expanded = false;
 
@@ -262,12 +321,15 @@ public class ArtistInYear extends AppCompatActivity {
                     case BottomSheetBehavior.STATE_EXPANDED:
                         getSupportActionBar().setTitle(R.string.playerTitle);
                         expanded = true;
+                        findViewById(R.id.btmSheet).setVisibility(View.GONE);
                         break;
                     case BottomSheetBehavior.STATE_COLLAPSED:
                         getSupportActionBar().setTitle(y);
+                        findViewById(R.id.btmSheet).setVisibility(View.VISIBLE);
                         expanded = false;
                         break;
                     case BottomSheetBehavior.STATE_DRAGGING:
+                        findViewById(R.id.btmSheet).setVisibility(View.VISIBLE);
                         break;
                     case BottomSheetBehavior.STATE_SETTLING:
                         break;
@@ -276,6 +338,7 @@ public class ArtistInYear extends AppCompatActivity {
 
             @Override
             public void onSlide(@NonNull View bottomSheet, float slideOffset) {
+                findViewById(R.id.btmSheet).setVisibility(View.VISIBLE);
                 float x = 1 - slideOffset;
                 findViewById(R.id.btmSheet).setAlpha(x);
 
@@ -392,6 +455,22 @@ public class ArtistInYear extends AppCompatActivity {
         registerReceiver(newAudio, filter);
     }
 
+    private BroadcastReceiver bufferingUpdate = new BroadcastReceiver() {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int status = intent.getExtras().getInt("status");
+            double ratio = status / 100.0;
+            int bufferingLevel = (int) (mSeekBar.getMax() * ratio);
+            mSeekBar.setSecondaryProgress(bufferingLevel);
+        }
+    };
+
+    private void registerBufferingUpdate() {
+        IntentFilter filter = new IntentFilter(MediaPlayerService.Buffering_Upadate);
+        registerReceiver(bufferingUpdate, filter);
+    }
+
     private BroadcastReceiver buffering = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -465,6 +544,7 @@ public class ArtistInYear extends AppCompatActivity {
             Toast.makeText(getApplicationContext(), "Play some audio first", Toast.LENGTH_LONG).show();
         }
     }
+
     private void loadPlayer() {
         if (isLoading) {
             ct.setText(trackTitle);
@@ -489,12 +569,22 @@ public class ArtistInYear extends AppCompatActivity {
             loadingExp.setVisibility(View.VISIBLE);
             mSeekBar.setEnabled(false);
         } else {
-
             ct.setText(trackTitle);
             st.setText(trackSub);
             tt.setText(trackTitle);
             ts.setText(trackSub);
             du.setText(duration);
+
+            if (loopStatus == noLoop) {
+                repeat.setImageResource(R.drawable.ic_repeat_white_24dp);
+                repeat.setMinimumHeight(1);
+            } else if (loopStatus == loopAll) {
+                repeat.setImageResource(R.drawable.ic_repeat_green_24dp);
+                repeat.setMinimumHeight(2);
+            } else if (loopStatus == loopOne) {
+                repeat.setImageResource(R.drawable.ic_repeat_one_green_24dp);
+                repeat.setMinimumHeight(3);
+            }
 
             if (haveTrack) {
                 Glide.with(this)
@@ -505,9 +595,13 @@ public class ArtistInYear extends AppCompatActivity {
                         .asBitmap()
                         .load(trackImg)
                         .into(iv2);
+                mProgressBar.setMax(intDuration);
             } else {
-                iv1.setImageResource(R.drawable.ic_launcher_background);
-                iv2.setImageResource(R.drawable.ic_launcher_background);
+                iv1.setImageResource(R.drawable.player_background);
+                iv2.setImageResource(R.drawable.player_background);
+                mProgressBar.setMax(100);
+                mProgressBar.setProgress(100);
+
             }
 
             mSeekBar.setMax(intDuration);
@@ -527,8 +621,10 @@ public class ArtistInYear extends AppCompatActivity {
                 pb.setImageResource(R.drawable.ic_play_arrow_white_24dp);
                 con.setImageResource(R.drawable.ic_play_arrow_white_24dp);
             }
+
             if (haveTrack) {
                 mSeekBar.setProgress(currentTime);
+                mProgressBar.setProgress(currentTime);
                 cp.setText(currentStringTime);
                 mHandler = new Handler();
                 mHandler.postDelayed(mUpdateTimeTask, 100);
@@ -562,6 +658,7 @@ public class ArtistInYear extends AppCompatActivity {
 
             mHandler.postDelayed(this, 100);
             mSeekBar.setProgress(mediaPlayer.getCurrentPosition());
+            mProgressBar.setProgress(mediaPlayer.getCurrentPosition());
         }
     };
 
@@ -599,6 +696,7 @@ public class ArtistInYear extends AppCompatActivity {
         editor.putString("currentStringTime", currentStringTime);
         editor.putInt("intDuration", intDuration);
         editor.putString("duration", duration);
+        editor.putInt("loop", loopStatus);
         editor.apply();
     }
 
@@ -611,6 +709,7 @@ public class ArtistInYear extends AppCompatActivity {
             case android.R.id.home:
                 if (expanded) {
                     sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                    return true;
                 } else {
                     writeData();
                     finish();
