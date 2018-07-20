@@ -26,6 +26,7 @@ import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.view.View;
 import android.widget.RemoteViews;
+import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -80,6 +81,12 @@ public class MediaPlayerService extends Service
     private boolean onGoingCall = false;
     private TelephonyManager telephonyManager;
     private PhoneStateListener phoneStateListener;
+    private boolean shouldPlay = false;
+
+    //Loop strings
+    private static final int noLoop = 1;
+    private static final int loopAll = 2;
+    private static final int loopOne = 3;
 
     public static final String Broadcast_PLAYER_PREPARED = "it.stream.streamit.PlayerPrepared";
     public static final String Buffering_Upadate = "it.stream.streamit.BufferingUpdate";
@@ -88,10 +95,12 @@ public class MediaPlayerService extends Service
     public static final String buffering_End = "it.stream.streamit.bufferingEnd";
     public static final String Action_Play = "it.stream.streamit.ACTION_PLAY";
     public static final String Action_Pause = "it.stream.streamit.ACTION_PAUSE";
+    public static final String Kill_Player = "it.stream.streamit.KILL_PLAYER";
 
     /*
     Notification Stuff
      */
+
 
     NotificationManagerCompat notificationManagerCompat;
 
@@ -139,6 +148,11 @@ public class MediaPlayerService extends Service
 
         new getBitmapFromURL().execute(img);
 
+        Intent resumeIntent = new Intent(this, MainActivity.class);
+        resumeIntent.setAction(Intent.ACTION_MAIN);
+        resumeIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        PendingIntent resumePendingIntent = PendingIntent.getActivity(this, 0, resumeIntent, 0);
+
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this, "default")
                 .setSmallIcon(R.drawable.ic_notifiction_icon)
                 .setLargeIcon(bitmap)
@@ -147,7 +161,8 @@ public class MediaPlayerService extends Service
                 .setContent(remoteViews)
                 .setCustomContentView(remoteViews)
                 .setPriority(Notification.PRIORITY_MAX)
-                .setOngoing(Flag_Sticky);
+                .setOngoing(Flag_Sticky)
+                .setContentIntent(resumePendingIntent);
 
         notificationManagerCompat = NotificationManagerCompat.from(this);
         notificationManagerCompat.notify(100, mBuilder.build());
@@ -335,28 +350,85 @@ public class MediaPlayerService extends Service
 
     @Override
     public void onCompletion(android.media.MediaPlayer mediaPlayer) {
-        if (!(playlistPosition == playlistSize - 1)) {
-            playlistPosition++;
-            title = mPlaylist.get(playlistPosition).getTitle();
-            img = mPlaylist.get(playlistPosition).getImageUrl();
-            mediaFile = mPlaylist.get(playlistPosition).getURL();
-            String st = mPlaylist.get(playlistPosition).getArtist();
-            st += " | ";
-            st += mPlaylist.get(playlistPosition).getYear();
-            sub = st;
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+        int loop = sp.getInt("loop", 1);
+        if (loop == loopOne) {
+            mediaPlayer.seekTo(0);
+            playMedia();
+        } else if (loop == loopAll) {
+            if (!(playlistPosition == playlistSize - 1)) {
+                playlistPosition++;
+                title = mPlaylist.get(playlistPosition).getTitle();
+                img = mPlaylist.get(playlistPosition).getImageUrl();
+                mediaFile = mPlaylist.get(playlistPosition).getURL();
+                String st = mPlaylist.get(playlistPosition).getArtist();
+                st += " | ";
+                st += mPlaylist.get(playlistPosition).getYear();
+                sub = st;
 
-            Intent intent1 = new Intent(New_Audio);
-            intent1.putExtra("title", title);
-            intent1.putExtra("sub", sub);
-            intent1.putExtra("img", img);
-            sendBroadcast(intent1);
+                Intent intent1 = new Intent(New_Audio);
+                intent1.putExtra("title", title);
+                intent1.putExtra("sub", sub);
+                intent1.putExtra("img", img);
+                sendBroadcast(intent1);
 
-            stopMedia();
-            //mediaPlayer.reset();
-            mediaPlayer.release();
-            initMediaPlayer();
+                stopMedia();
+                //mediaPlayer.reset();
+                mediaPlayer.release();
+                initMediaPlayer();
 
-            showNotif(Status.Loading);
+                showNotif(Status.Loading);
+            } else if (playlistPosition == playlistSize - 1) {
+                playlistPosition = 0;
+                title = mPlaylist.get(playlistPosition).getTitle();
+                img = mPlaylist.get(playlistPosition).getImageUrl();
+                mediaFile = mPlaylist.get(playlistPosition).getURL();
+                String st = mPlaylist.get(playlistPosition).getArtist();
+                st += " | ";
+                st += mPlaylist.get(playlistPosition).getYear();
+                sub = st;
+
+                Intent intent1 = new Intent(New_Audio);
+                intent1.putExtra("title", title);
+                intent1.putExtra("sub", sub);
+                intent1.putExtra("img", img);
+                sendBroadcast(intent1);
+
+                stopMedia();
+                //mediaPlayer.reset();
+                mediaPlayer.release();
+                initMediaPlayer();
+
+                showNotif(Status.Loading);
+            }
+        } else if (loop == noLoop) {
+            if (!(playlistPosition == playlistSize - 1)) {
+                playlistPosition++;
+                title = mPlaylist.get(playlistPosition).getTitle();
+                img = mPlaylist.get(playlistPosition).getImageUrl();
+                mediaFile = mPlaylist.get(playlistPosition).getURL();
+                String st = mPlaylist.get(playlistPosition).getArtist();
+                st += " | ";
+                st += mPlaylist.get(playlistPosition).getYear();
+                sub = st;
+
+                Intent intent1 = new Intent(New_Audio);
+                intent1.putExtra("title", title);
+                intent1.putExtra("sub", sub);
+                intent1.putExtra("img", img);
+                sendBroadcast(intent1);
+
+                stopMedia();
+                //mediaPlayer.reset();
+                mediaPlayer.release();
+                initMediaPlayer();
+
+                showNotif(Status.Loading);
+            } else {
+                Intent killPlayer = new Intent(Kill_Player);
+                sendBroadcast(killPlayer);
+                notificationManagerCompat.cancel(100);
+            }
         }
     }
 
@@ -407,6 +479,12 @@ public class MediaPlayerService extends Service
 
     }
 
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        stopSelf();
+        super.onTaskRemoved(rootIntent);
+    }
+
     /**
      * Broadcast receiver
      */
@@ -443,16 +521,22 @@ public class MediaPlayerService extends Service
                     case TelephonyManager.CALL_STATE_OFFHOOK:
                     case TelephonyManager.CALL_STATE_RINGING:
                         if (mediaPlayer != null) {
-                            pauseMedia();
-                            onGoingCall = true;
+                            if (mediaPlayer.isPlaying()) {
+                                pauseMedia();
+                                onGoingCall = true;
+                                shouldPlay = true;
+                            }
                         }
                         break;
                     case TelephonyManager.CALL_STATE_IDLE:
                         //Phone idle. Start playing
                         if (mediaPlayer != null) {
-                            if (onGoingCall) {
-                                onGoingCall = false;
-                                resumeMedia();
+                            if (shouldPlay) {
+                                if (onGoingCall) {
+                                    onGoingCall = false;
+                                    shouldPlay = false;
+                                    resumeMedia();
+                                }
                             }
                         }
                         break;
@@ -499,7 +583,7 @@ public class MediaPlayerService extends Service
             sendBroadcast(intent1);
 
             stopMedia();
-            mediaPlayer.reset();
+            //mediaPlayer.reset();
             initMediaPlayer();
 
             showNotif(Status.Loading);
