@@ -46,6 +46,7 @@ import java.util.ServiceConfigurationError;
 
 import static it.stream.streamit.MediaPlayerService.Action_Pause;
 import static it.stream.streamit.MediaPlayerService.Action_Play;
+import static it.stream.streamit.MediaPlayerService.Kill_Player;
 
 public class Artists extends AppCompatActivity {
 
@@ -131,6 +132,7 @@ public class Artists extends AppCompatActivity {
         unregisterReceiver(bufferingEnd);
         unregisterReceiver(paused);
         unregisterReceiver(resume);
+        unregisterReceiver(resetPlayerUI);
         if (running) {
             mHandler.removeCallbacks(mUpdateTimeTask);
         }
@@ -151,6 +153,7 @@ public class Artists extends AppCompatActivity {
         registerBufferingEnd();
         registerPaused();
         registerResume();
+        registerResetPlayerUI();
 
         //Bottom Sheet Stuff
         pb = findViewById(R.id.play);
@@ -255,14 +258,17 @@ public class Artists extends AppCompatActivity {
                         repeat.setImageResource(R.drawable.ic_repeat_green_24dp);
                         repeat.setMinimumHeight(2);
                         loopStatus = 2;
+                        writeData();
                     } else if (repeat.getMinimumHeight() == loopAll) {
                         repeat.setImageResource(R.drawable.ic_repeat_one_green_24dp);
                         repeat.setMinimumHeight(3);
                         loopStatus = 3;
+                        writeData();
                     } else if (repeat.getMinimumHeight() == loopOne) {
                         repeat.setImageResource(R.drawable.ic_repeat_white_24dp);
                         repeat.setMinimumHeight(1);
                         loopStatus = 1;
+                        writeData();
                     }
                 }
             }
@@ -487,6 +493,30 @@ public class Artists extends AppCompatActivity {
         registerReceiver(resume, filter);
     }
 
+    private BroadcastReceiver resetPlayerUI = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            playing = false;
+            intDuration = 0;
+            currentTime = 0;
+            isLoading = false;
+            trackTitle = "Track Title";
+            trackSub = "Artist | year";
+            trackImg = "";
+            haveTrack = false;
+            currentStringTime = "00:00";
+            duration = "00:00";
+
+            writeData();
+            loadPlayer();
+        }
+    };
+
+    private void registerResetPlayerUI() {
+        IntentFilter filter = new IntentFilter(Kill_Player);
+        registerReceiver(resetPlayerUI, filter);
+    }
+
     //Broadcast Receivers end
 
     //Loading and controlling media player
@@ -538,6 +568,7 @@ public class Artists extends AppCompatActivity {
             tt.setText(trackTitle);
             ts.setText(trackSub);
             du.setText(duration);
+            cp.setText(currentStringTime);
 
             if (loopStatus == noLoop) {
                 repeat.setImageResource(R.drawable.ic_repeat_white_24dp);

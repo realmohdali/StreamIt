@@ -60,7 +60,9 @@
         <activity android:name=".Album"
             android:screenOrientation="nosensor"/>
 
-        <service android:name=".MediaPlayerService"/>
+        <service
+            android:name=".MediaPlayerService"
+            android:stopWithTask="false" />
 
     </application>
 
