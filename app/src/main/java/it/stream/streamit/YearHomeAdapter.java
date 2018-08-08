@@ -1,5 +1,6 @@
 package it.stream.streamit;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.support.annotation.NonNull;
@@ -10,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 
@@ -22,10 +24,12 @@ import static com.bumptech.glide.request.RequestOptions.bitmapTransform;
 class YearHomeAdapter extends RecyclerView.Adapter<YearHomeAdapter.ViewHolder> {
     private List<YearList> mYearList;
     private Context mContext;
+    private Activity mActivity;
 
-    public YearHomeAdapter(Context mContext, List<YearList> mYearList) {
+    public YearHomeAdapter(Context mContext, List<YearList> mYearList, Activity mActivity) {
         this.mYearList = mYearList;
         this.mContext = mContext;
+        this.mActivity = mActivity;
     }
 
     @NonNull
@@ -42,14 +46,19 @@ class YearHomeAdapter extends RecyclerView.Adapter<YearHomeAdapter.ViewHolder> {
         Glide.with(mContext)
                 .asBitmap()
                 .load(mYearList.get(i).getImageUrl())
-                .apply(bitmapTransform(new RoundedCornersTransformation(5,0, RoundedCornersTransformation.CornerType.ALL)))
+                .apply(bitmapTransform(new RoundedCornersTransformation(5, 0, RoundedCornersTransformation.CornerType.ALL)))
                 .into(viewHolder.iv);
         viewHolder.cv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent(view.getContext(), ArtistInYear.class);
-                intent.putExtra("year", mYearList.get(i).getYear());
-                view.getContext().startActivity(intent);
+                if (ConnectionCheck.isConnected(mContext)) {
+                    Intent intent = new Intent(view.getContext(), ArtistInYear.class);
+                    intent.putExtra("year", mYearList.get(i).getYear());
+                    view.getContext().startActivity(intent);
+                    mActivity.overridePendingTransition(0, 0);
+                } else {
+                    Toast.makeText(mContext, R.string.offline, Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }

@@ -1,6 +1,5 @@
 package it.stream.streamit;
 
-import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -9,24 +8,33 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomSheetBehavior;
-import android.support.design.widget.Snackbar;
+import android.support.design.widget.CollapsingToolbarLayout;
+import android.support.design.widget.NavigationView;
+import android.support.design.widget.TabLayout;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.view.ViewPager;
+import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.Toolbar;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -35,20 +43,21 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.bumptech.glide.Glide;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TooManyListenersException;
 
 import static it.stream.streamit.MediaPlayerService.Action_Pause;
 import static it.stream.streamit.MediaPlayerService.Action_Play;
@@ -56,17 +65,32 @@ import static it.stream.streamit.MediaPlayerService.Kill_Player;
 
 public class ArtistInYear extends AppCompatActivity {
 
+    private Toolbar toolbar;
+    private DrawerLayout mDrawerLayout;
+    private boolean drawerOpen;
+    private ViewPager mViewPagerControl;
+    private TabLayout tabLayout;
+    private RelativeLayout mRelativeLayout;
+    private RelativeLayout mediaPlayerUI;
+    private ImageView toolbarImage;
+    private String imgUrl;
+    private ProgressBar toolbarProgress;
+
+    private String trackUrl;
+    private SQLiteDatabase db;
+
+    private String mediaQueue;
+
     private String year;
     private String y;
     private String URL = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showArtistInYear.php";
     private List<ArtistInYearList> mList;
 
     private MediaPlayerService mediaPlayer;
-    private boolean serviceBound;
     private boolean playing;
+    private boolean serviceBound;
 
     //BottomSheetStuff
-    //private Button pb;
     private ImageButton pb;
     private ImageButton con;
     private TextView ct, st, tt, ts, cp, du;
@@ -86,146 +110,320 @@ public class ArtistInYear extends AppCompatActivity {
     private Handler mHandler;
     private boolean running = false;
 
-    BottomSheetBehavior sheetBehavior;
+    private BottomSheetBehavior sheetBehavior;
 
     //Loop strings
-    private static final int noLoop=1;
-    private static final int loopAll=2;
-    private static final int loopOne=3;
+    private static final int noLoop = 1;
+    private static final int loopAll = 2;
+    private static final int loopOne = 3;
 
-    private RecyclerView mRecyclerView;
-    private RecyclerView.Adapter mAdapter;
-
-
-    //Activity Life Cycle start
+    private int marginInPx;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_artist_in_year);
 
+        db = openOrCreateDatabase("favorite", MODE_PRIVATE, null);
+
+        mediaPlayerUI = findViewById(R.id.bottom_sheet);
+        mediaPlayerUI.setVisibility(View.GONE);
+
+        float scale = getResources().getDisplayMetrics().density;
+        marginInPx = (int) (50 * scale + 0.5f);
+
+        mViewPagerControl = findViewById(R.id.pager);
+        mRelativeLayout = findViewById(R.id.loadingDataHome);
+        tabLayout = findViewById(R.id.tab_layout);
+
+        mDrawerLayout = findViewById(R.id.drawer_layout);
+        setUpToolbar();
+        setUpNavDrawer();
         loadActivity();
         loadBottomSheet();
     }
 
     @Override
-    protected void onPause() {
-        writeData();
-        super.onPause();
-    }
-
-    @Override
     protected void onResume() {
         super.onResume();
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        trackTitle = preferences.getString("title", "");
-        trackSub = preferences.getString("sub", "");
-        trackImg = preferences.getString("img", "");
-        isLoading = preferences.getBoolean("loading", false);
-        playing = preferences.getBoolean("playing", false);
-        haveTrack = preferences.getBoolean("haveTrack", false);
-        currentTime = preferences.getInt("currentTime", 0);
-        currentStringTime = preferences.getString("currentStringTime", "");
-        duration = preferences.getString("duration", "");
-        intDuration = preferences.getInt("intDuration", 0);
-        loopStatus = preferences.getInt("loop", 0);
-        loadPlayer();
+        readData();
+
+        if (haveTrack) {
+            mediaPlayerUI.setVisibility(View.VISIBLE);
+            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) mViewPagerControl.getLayoutParams();
+            params.setMargins(0, 0, 0, marginInPx);
+            mViewPagerControl.setLayoutParams(params);
+            loadPlayer();
+        }
     }
 
     @Override
     protected void onDestroy() {
-        unregisterReceiver(playerPrepared);
         unregisterReceiver(newAudio);
+        unregisterReceiver(playerPrepared);
         unregisterReceiver(bufferingUpdate);
         unregisterReceiver(buffering);
         unregisterReceiver(bufferingEnd);
         unregisterReceiver(paused);
         unregisterReceiver(resume);
         unregisterReceiver(resetPlayerUI);
+        writeData();
         if (running) {
             mHandler.removeCallbacks(mUpdateTimeTask);
         }
-        writeData();
         unbindService(serviceConnection);
         super.onDestroy();
     }
 
-    //Activity life cycle end
+    @Override
+    protected void onPause() {
+        writeData();
+        if (running) {
+            mHandler.removeCallbacks(mUpdateTimeTask);
+        }
+        super.onPause();
+    }
 
-    //Methods to load data on screen
+    //Activity lifecycle End
 
     private void loadActivity() {
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setDisplayShowHomeEnabled(true);
+
+        registerPlayerPrepared();
+        registerBufferingUpdate();
+        registerNewAudio();
+        registerBuffering();
+        registerBufferingEnd();
+        registerPaused();
+        registerResume();
+        registerResetPlayerUI();
+
+        //Bottom Sheet Stuff
+        pb = findViewById(R.id.play);
+        con = findViewById(R.id.control);
+        ct = findViewById(R.id.currentTitle);
+        st = findViewById(R.id.subtitle);
+        tt = findViewById(R.id.tackTitle);
+        ts = findViewById(R.id.trackSub);
+        iv1 = findViewById(R.id.img);
+        iv2 = findViewById(R.id.albumArt);
+        cp = findViewById(R.id.cTime);
+        du = findViewById(R.id.eTime);
+        mSeekBar = findViewById(R.id.seekBar);
+        loading = findViewById(R.id.loading);
+        loadingExp = findViewById(R.id.loadingExp);
+        intDuration = 0;
+        currentTime = 0;
+        isLoading = false;
+        trackTitle = "Track Title";
+        trackSub = "Artist | year";
+        trackImg = "";
+        haveTrack = false;
+        currentStringTime = "00:00";
+        mProgressBar = findViewById(R.id.progressBar);
+        repeat = findViewById(R.id.repeat);
+        fav = findViewById(R.id.fav);
+        isFav = false;
+        loopStatus = noLoop;
+
+        trackUrl = "";
+
+        serviceBound = false;
+
+        mList = new ArrayList<>();
+
+        Intent intent = new Intent(this, MediaPlayerService.class);
+        bindService(intent, serviceConnection, Context.BIND_ABOVE_CLIENT);
+
+        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) mViewPagerControl.getLayoutParams();
+        params.setMargins(0, 0, 0, 0);
+        mViewPagerControl.setLayoutParams(params);
+    }
+
+    private void setUpToolbar() {
+        Bundle bundle = getIntent().getExtras();
+        year = bundle.getString("year");
+        y = year;
+        year = "year" + year;
+
+        toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
+        getSupportActionBar().setTitle(y);
+
+        loadData();
+    }
+
+    private void setUpTabs() {
+        for (int i = 0; i < mList.size(); i++) {
+            tabLayout.addTab(tabLayout.newTab().setText(mList.get(i).getArtist()));
         }
+        tabLayout.setTabMode(TabLayout.MODE_SCROLLABLE);
+        tabLayout.setTabGravity(TabLayout.GRAVITY_CENTER);
 
-        if (isOnline()) {
+        toolbarImage = findViewById(R.id.toolbarImage);
+        imgUrl = mList.get(0).getImageUrl();
+        Glide.with(this)
+                .asBitmap()
+                .load(imgUrl)
+                .into(toolbarImage);
 
-            registerPlayerPrepared();
-            registerNewAudio();
-            registerBufferingUpdate();
-            registerBuffering();
-            registerBufferingEnd();
-            registerPaused();
-            registerResume();
-            registerResetPlayerUI();
+        toolbarProgress = findViewById(R.id.toolbarProgress);
+        toolbarProgress.setVisibility(View.GONE);
+        toolbarImage.setVisibility(View.VISIBLE);
 
-            Bundle bundle = getIntent().getExtras();
-            year = bundle.getString("year");
-            getSupportActionBar().setTitle(year);
-            y = year;
-            year = "year" + year;
+        final ViewPager viewPager = findViewById(R.id.pager);
 
-            //Bottom Sheet Stuff
-            pb = findViewById(R.id.play);
-            con = findViewById(R.id.control);
-            ct = findViewById(R.id.currentTitle);
-            st = findViewById(R.id.subtitle);
-            tt = findViewById(R.id.tackTitle);
-            ts = findViewById(R.id.trackSub);
-            iv1 = findViewById(R.id.img);
-            iv2 = findViewById(R.id.albumArt);
-            cp = findViewById(R.id.cTime);
-            du = findViewById(R.id.eTime);
-            mSeekBar = findViewById(R.id.seekBar);
-            loading = findViewById(R.id.loading);
-            loadingExp = findViewById(R.id.loadingExp);
-            intDuration = 0;
-            currentTime = 0;
-            isLoading = false;
-            trackTitle = "Track Title";
-            trackSub = "Artist | year";
-            trackImg = "";
-            haveTrack = false;
-            currentStringTime = "00:00";
-            mProgressBar=findViewById(R.id.progressBar);
-            repeat=findViewById(R.id.repeat);
-            fav=findViewById(R.id.fav);
-            isFav=false;
-            loopStatus = 0;
+        final YearPagerAdapter pagerAdapter = new YearPagerAdapter(getSupportFragmentManager(), tabLayout.getTabCount(), getApplicationContext(), mList, y);
 
-            Intent intent = new Intent(this, MediaPlayerService.class);
-            bindService(intent, serviceConnection, Context.BIND_ABOVE_CLIENT);
+        viewPager.setAdapter(pagerAdapter);
 
-            mRecyclerView = findViewById(R.id.artistInYear);
-            mRecyclerView.setHasFixedSize(true);
-            mRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
+        viewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabLayout));
 
-            mList = new ArrayList<>();
+        tabLayout.addOnTabSelectedListener(new TabLayout.BaseOnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                viewPager.setCurrentItem(tab.getPosition());
+                toolbarImage.setVisibility(View.GONE);
+                toolbarProgress.setVisibility(View.VISIBLE);
+                imgUrl = mList.get(tab.getPosition()).getImageUrl();
+                Glide.with(getApplicationContext())
+                        .asBitmap()
+                        .load(imgUrl)
+                        .into(toolbarImage);
+                toolbarProgress.setVisibility(View.GONE);
+                toolbarImage.setVisibility(View.VISIBLE);
+            }
 
-            loadData();
-        } else {
-            Snackbar sb = Snackbar.make(findViewById(R.id.mainLayout), "You are offline", Snackbar.LENGTH_INDEFINITE);
-            sb.setAction("Try Again", new ArtistInYear.TryAgain());
-            sb.show();
-        }
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+
+            }
+        });
+
+    }
+
+    private void loadData() {
+        tabLayout.setVisibility(View.GONE);
+        mViewPagerControl.setVisibility(View.GONE);
+        mRelativeLayout.setVisibility(View.VISIBLE);
+        StringRequest stringRequest = new StringRequest(Request.Method.POST,
+                URL,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        try {
+                            mRelativeLayout.setVisibility(View.GONE);
+                            tabLayout.setVisibility(View.VISIBLE);
+                            mViewPagerControl.setVisibility(View.VISIBLE);
+                            JSONArray jsonArray = new JSONArray(response);
+
+                            for (int i = 0; i < jsonArray.length(); i++) {
+                                JSONObject jsonObject = jsonArray.getJSONObject(i);
+
+                                String artist = jsonObject.getString("artist");
+                                String image = "http://realmohdali.000webhostapp.com/streamIt/";
+                                image += jsonObject.getString("image");
+
+                                ArtistInYearList li = new ArtistInYearList(artist, image);
+                                mList.add(li);
+                            }
+                            setUpTabs();
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+
+            }
+        }) {
+            @Override
+            protected Map<String, String> getParams() {
+
+                Map<String, String> params = new HashMap<>();
+                params.put("y", year);
+                return params;
+            }
+        };
+        stringRequest.setShouldCache(false);
+        RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
+        requestQueue.add(stringRequest);
+    }
+
+    private void setUpNavDrawer() {
+        mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END);
+        NavigationView navigationView = findViewById(R.id.nav_view);
+        drawerOpen = false;
+        navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
+            @Override
+            public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
+                menuItem.setChecked(true);
+                switch (menuItem.getItemId()) {
+                    case R.id.homePage:
+                        mDrawerLayout.closeDrawers();
+                        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                        startActivity(intent);
+                        finish();
+                        overridePendingTransition(0, 0);
+                        return true;
+                    case R.id.favOption:
+                        mDrawerLayout.closeDrawers();
+                        Intent intent1 = new Intent(getApplicationContext(), Favorite.class);
+                        startActivity(intent1);
+                        overridePendingTransition(0, 0);
+                        return true;
+                    case R.id.about:
+                        mDrawerLayout.closeDrawers();
+                        Toast.makeText(getApplicationContext(), "About is clicked", Toast.LENGTH_SHORT).show();
+                        return true;
+                    default:
+                        mDrawerLayout.closeDrawers();
+                        return true;
+                }
+            }
+        });
+
+        mDrawerLayout.addDrawerListener(new DrawerLayout.DrawerListener() {
+            @Override
+            public void onDrawerSlide(@NonNull View view, float v) {
+
+            }
+
+            @Override
+            public void onDrawerOpened(@NonNull View view) {
+                drawerOpen = true;
+            }
+
+            @Override
+            public void onDrawerClosed(@NonNull View view) {
+                drawerOpen = false;
+            }
+
+            @Override
+            public void onDrawerStateChanged(int i) {
+
+            }
+        });
     }
 
     private void loadBottomSheet() {
-        /**Bottom Sheet Stuff**/
 
         pb.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                playPause(view);
+            }
+        });
+
+        con.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 playPause(view);
@@ -248,13 +446,6 @@ public class ArtistInYear extends AppCompatActivity {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
 
-            }
-        });
-
-        con.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                playPause(view);
             }
         });
 
@@ -304,12 +495,42 @@ public class ArtistInYear extends AppCompatActivity {
         fav.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(isFav){
-                    fav.setImageResource(R.drawable.ic_favorite_border_white_24dp);
-                    isFav=false;
-                }else{
-                    fav.setImageResource(R.drawable.ic_favorite_green_24dp);
-                    isFav=true;
+                if (haveTrack) {
+                    if (isFav) {
+                        FavoriteManagement favoriteManagement = new FavoriteManagement(trackTitle, trackUrl, trackImg, trackSub, db, getApplicationContext());
+                        switch (favoriteManagement.removeFav()) {
+                            case FavoriteManagement.SUCCESS:
+                                fav.setImageResource(R.drawable.ic_favorite_border_white_24dp);
+                                isFav = false;
+                                Toast.makeText(getApplicationContext(), "Removed from favorite", Toast.LENGTH_SHORT).show();
+                                break;
+                            case FavoriteManagement.ALREADY_EXISTS_OR_REMOVED:
+                                fav.setImageResource(R.drawable.ic_favorite_border_white_24dp);
+                                isFav = false;
+                                Toast.makeText(getApplicationContext(), "This track does not exist in favorite", Toast.LENGTH_SHORT).show();
+                                break;
+                            case FavoriteManagement.ERROR:
+                                Toast.makeText(getApplicationContext(), "Error in removing from favorite", Toast.LENGTH_SHORT).show();
+                                break;
+                        }
+                    } else {
+                        FavoriteManagement favoriteManagement = new FavoriteManagement(trackTitle, trackUrl, trackImg, trackSub, db, getApplicationContext());
+                        switch (favoriteManagement.addFav()) {
+                            case FavoriteManagement.SUCCESS:
+                                fav.setImageResource(R.drawable.ic_favorite_green_24dp);
+                                isFav = true;
+                                Toast.makeText(getApplicationContext(), "Added to favorite", Toast.LENGTH_SHORT).show();
+                                break;
+                            case FavoriteManagement.ALREADY_EXISTS_OR_REMOVED:
+                                fav.setImageResource(R.drawable.ic_favorite_green_24dp);
+                                isFav = true;
+                                Toast.makeText(getApplicationContext(), "This track is already exist in favorite", Toast.LENGTH_SHORT).show();
+                                break;
+                            case FavoriteManagement.ERROR:
+                                Toast.makeText(getApplicationContext(), "Error in adding to favorite", Toast.LENGTH_SHORT).show();
+                                break;
+                        }
+                    }
                 }
             }
         });
@@ -317,21 +538,30 @@ public class ArtistInYear extends AppCompatActivity {
         sheetBehavior = BottomSheetBehavior.from(findViewById(R.id.bottom_sheet));
         expanded = false;
 
-        //State change listener
         sheetBehavior.setBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
             @Override
-            public void onStateChanged(@NonNull View bottomSheet, int newState) {
-                switch (newState) {
+            public void onStateChanged(@NonNull View view, int i) {
+                switch (i) {
                     case BottomSheetBehavior.STATE_HIDDEN:
                         break;
                     case BottomSheetBehavior.STATE_EXPANDED:
+                        Toolbar playerToolbar = findViewById(R.id.player_toolbar);
+                        setSupportActionBar(playerToolbar);
+                        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+                        getSupportActionBar().setDisplayShowHomeEnabled(true);
                         getSupportActionBar().setTitle(R.string.playerTitle);
+                        mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.START);
+                        mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.END);
+                        //playerToolbar.inflateMenu(R.menu.player_options_menu);
                         expanded = true;
                         findViewById(R.id.btmSheet).setVisibility(View.GONE);
                         break;
                     case BottomSheetBehavior.STATE_COLLAPSED:
-                        getSupportActionBar().setTitle(y);
-                        findViewById(R.id.btmSheet).setVisibility(View.VISIBLE);
+                        setSupportActionBar(toolbar);
+                        getSupportActionBar().setDisplayHomeAsUpEnabled(false);
+                        getSupportActionBar().setDisplayShowHomeEnabled(false);
+                        mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.START);
+                        mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END);
                         expanded = false;
                         break;
                     case BottomSheetBehavior.STATE_DRAGGING:
@@ -343,75 +573,28 @@ public class ArtistInYear extends AppCompatActivity {
             }
 
             @Override
-            public void onSlide(@NonNull View bottomSheet, float slideOffset) {
+            public void onSlide(@NonNull View view, float v) {
                 findViewById(R.id.btmSheet).setVisibility(View.VISIBLE);
-                float x = 1 - slideOffset;
+                float x = 1 - v;
                 findViewById(R.id.btmSheet).setAlpha(x);
+            }
+        });
 
+        findViewById(R.id.btmSheet).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                sheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
             }
         });
     }
 
-    private void loadData() {
-        final ProgressDialog progressDialog = new ProgressDialog(this);
-        progressDialog.setMessage("Loading data...");
-        progressDialog.setCancelable(false);
-        progressDialog.show();
-
-        StringRequest stringRequest = new StringRequest(Request.Method.POST,
-                URL,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        progressDialog.dismiss();
-                        try {
-                            JSONArray jsonArray = new JSONArray(response);
-
-                            for (int i = 0; i < jsonArray.length(); i++) {
-                                JSONObject jsonObject = jsonArray.getJSONObject(i);
-
-                                String artist = jsonObject.getString("artist");
-                                String image = "http://realmohdali.000webhostapp.com/streamIt/";
-                                image += jsonObject.getString("image");
-
-                                ArtistInYearList li = new ArtistInYearList(artist, image);
-                                mList.add(li);
-                            }
-
-                            mAdapter = new ArtistInYearAdapter(getApplicationContext(), mList, y);
-                            mRecyclerView.setAdapter(mAdapter);
-
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-
-            }
-        }) {
-            @Override
-            protected Map<String, String> getParams() {
-
-                Map<String, String> params = new HashMap<>();
-                params.put("y", year);
-                return params;
-            }
-        };
-        stringRequest.setShouldCache(false);
-        RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
-        requestQueue.add(stringRequest);
-    }
-
-    //Methods to load data on screen end
+    //Methods to load data on screen End
 
     //Broadcast Receivers
 
     private BroadcastReceiver playerPrepared = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            //String eTime = intent.getExtras().getString("eTime");
             duration = "";
             int millis = mediaPlayer.getDuration();
             int seconds = (millis / 1000) % 60;
@@ -434,6 +617,7 @@ public class ArtistInYear extends AppCompatActivity {
             isLoading = false;
 
             loadPlayer();
+            writeData();
         }
     };
 
@@ -448,11 +632,25 @@ public class ArtistInYear extends AppCompatActivity {
             trackTitle = intent.getExtras().getString("title");
             trackSub = intent.getExtras().getString("sub");
             trackImg = intent.getExtras().getString("img");
+            trackUrl = intent.getExtras().getString("url");
+            isFav = intent.getExtras().getBoolean("fav");
+            mediaQueue = intent.getExtras().getString("playlist");
 
             isLoading = true;
             haveTrack = true;
 
+            if (!serviceBound) {
+                Intent bound = new Intent(getApplicationContext(), MediaPlayerService.class);
+                bindService(bound, serviceConnection, Context.BIND_ABOVE_CLIENT);
+            }
+
+            mediaPlayerUI.setVisibility(View.VISIBLE);
+            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) mViewPagerControl.getLayoutParams();
+            params.setMargins(0, 0, 0, marginInPx);
+            mViewPagerControl.setLayoutParams(params);
+
             loadPlayer();
+            writeData();
         }
     };
 
@@ -490,6 +688,19 @@ public class ArtistInYear extends AppCompatActivity {
         registerReceiver(buffering, filter);
     }
 
+    private BroadcastReceiver bufferingEnd = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            isLoading = false;
+            loadPlayer();
+        }
+    };
+
+    private void registerBufferingEnd() {
+        IntentFilter filter = new IntentFilter(MediaPlayerService.buffering_End);
+        registerReceiver(bufferingEnd, filter);
+    }
+
     private BroadcastReceiver paused = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -516,19 +727,6 @@ public class ArtistInYear extends AppCompatActivity {
         registerReceiver(resume, filter);
     }
 
-    private BroadcastReceiver bufferingEnd = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            isLoading = false;
-            loadPlayer();
-        }
-    };
-
-    private void registerBufferingEnd() {
-        IntentFilter filter = new IntentFilter(MediaPlayerService.buffering_End);
-        registerReceiver(bufferingEnd, filter);
-    }
-
     private BroadcastReceiver resetPlayerUI = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -542,9 +740,24 @@ public class ArtistInYear extends AppCompatActivity {
             haveTrack = false;
             currentStringTime = "00:00";
             duration = "00:00";
+            serviceBound = false;
 
             writeData();
             loadPlayer();
+
+            if (expanded) {
+                sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+            }
+
+            if (running) {
+                mHandler.removeCallbacks(mUpdateTimeTask);
+                mediaPlayer.stopSelf();
+            }
+
+            mediaPlayerUI.setVisibility(View.GONE);
+            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) mViewPagerControl.getLayoutParams();
+            params.setMargins(0, 0, 0, 0);
+            mViewPagerControl.setLayoutParams(params);
         }
     };
 
@@ -555,19 +768,38 @@ public class ArtistInYear extends AppCompatActivity {
 
     //Broadcast Receivers end
 
+    //Binding Service to the client
+
+    private ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            //we're bound to local service cast the IBinder and get LocalService instance
+            MediaPlayerService.LocalBinder binder = (MediaPlayerService.LocalBinder) iBinder;
+            mediaPlayer = binder.getService();
+            serviceBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            serviceBound = false;
+        }
+    };
+
+    //binding service end
+
     //Loading and controlling media player
 
     public void playPause(View view) {
         if (serviceBound) {
             if (playing) {
                 mediaPlayer.pauseMedia();
-                pb.setImageResource(R.drawable.ic_play_arrow_white_24dp);
-                con.setImageResource(R.drawable.ic_play_arrow_white_24dp);
+                pb.setImageResource(R.drawable.ic_play_arrow);
+                con.setImageResource(R.drawable.ic_play_arrow);
                 playing = false;
             } else {
                 mediaPlayer.resumeMedia();
-                pb.setImageResource(R.drawable.ic_pause_white_24dp);
-                con.setImageResource(R.drawable.ic_pause_white_24dp);
+                pb.setImageResource(R.drawable.ic_pause);
+                con.setImageResource(R.drawable.ic_pause);
                 playing = true;
             }
         } else {
@@ -598,7 +830,17 @@ public class ArtistInYear extends AppCompatActivity {
             loading.setVisibility(View.VISIBLE);
             loadingExp.setVisibility(View.VISIBLE);
             mSeekBar.setEnabled(false);
+            if(isFav){
+                fav.setImageResource(R.drawable.ic_favorite_green_24dp);
+            }else {
+                fav.setImageResource(R.drawable.ic_favorite_border_white_24dp);
+            }
         } else {
+            if(isFav){
+                fav.setImageResource(R.drawable.ic_favorite_green_24dp);
+            }else {
+                fav.setImageResource(R.drawable.ic_favorite_border_white_24dp);
+            }
             ct.setText(trackTitle);
             st.setText(trackSub);
             tt.setText(trackTitle);
@@ -618,6 +860,26 @@ public class ArtistInYear extends AppCompatActivity {
             }
 
             if (haveTrack) {
+
+                RelativeLayout relativeLayout=findViewById(R.id.loadingPlaylist);
+                relativeLayout.setVisibility(View.VISIBLE);
+
+                //Playlist
+                Type type = new TypeToken<List<ListItem>>() {
+                }.getType();
+                Gson gson = new Gson();
+                List<ListItem> mPlaylist = gson.fromJson(mediaQueue, type);
+
+                RecyclerView queue = findViewById(R.id.queue);
+                LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getApplicationContext(), LinearLayoutManager.VERTICAL, false);
+                queue.setLayoutManager(linearLayoutManager);
+
+                RecyclerView.Adapter adapter = new AlbumAdapter(getApplicationContext(), mPlaylist);
+                queue.setAdapter(adapter);
+
+                relativeLayout.setVisibility(View.GONE);
+
+
                 Glide.with(this)
                         .asBitmap()
                         .load(trackImg)
@@ -632,7 +894,6 @@ public class ArtistInYear extends AppCompatActivity {
                 iv2.setImageResource(R.drawable.player_background);
                 mProgressBar.setMax(100);
                 mProgressBar.setProgress(100);
-
             }
 
             mSeekBar.setMax(intDuration);
@@ -646,11 +907,11 @@ public class ArtistInYear extends AppCompatActivity {
             mSeekBar.setEnabled(true);
 
             if (playing) {
-                pb.setImageResource(R.drawable.ic_pause_white_24dp);
-                con.setImageResource(R.drawable.ic_pause_white_24dp);
+                pb.setImageResource(R.drawable.ic_pause);
+                con.setImageResource(R.drawable.ic_pause);
             } else {
-                pb.setImageResource(R.drawable.ic_play_arrow_white_24dp);
-                con.setImageResource(R.drawable.ic_play_arrow_white_24dp);
+                pb.setImageResource(R.drawable.ic_play_arrow);
+                con.setImageResource(R.drawable.ic_play_arrow);
             }
 
             if (haveTrack) {
@@ -665,57 +926,58 @@ public class ArtistInYear extends AppCompatActivity {
 
     private Runnable mUpdateTimeTask = new Runnable() {
         public void run() {
-            running = true;
-            int currentPos = mediaPlayer.getCurrentPosition();
-            currentTime = currentPos;
-            int seconds = (currentPos / 1000) % 60;
-            long minutes = (currentPos / 1000 - seconds) / 60;
+            if (haveTrack) {
+                running = true;
+                int currentPos = mediaPlayer.getCurrentPosition();
+                currentTime = currentPos;
+                int seconds = (currentPos / 1000) % 60;
+                long minutes = (currentPos / 1000 - seconds) / 60;
 
-            String cPos = "";
+                String cPos = "";
 
-            if (minutes < 10) {
-                cPos += "0";
+                if (minutes < 10) {
+                    cPos += "0";
+                }
+                cPos += Long.toString(minutes);
+                cPos += ":";
+                if (seconds < 10) {
+                    cPos += "0";
+                }
+                cPos += Integer.toString(seconds);
+
+                cp.setText(cPos);
+                currentStringTime = cPos;
+
+                mHandler.postDelayed(this, 100);
+                mSeekBar.setProgress(mediaPlayer.getCurrentPosition());
+                mProgressBar.setProgress(mediaPlayer.getCurrentPosition());
             }
-            cPos += Long.toString(minutes);
-            cPos += ":";
-            if (seconds < 10) {
-                cPos += "0";
-            }
-            cPos += Integer.toString(seconds);
-
-            cp.setText(cPos);
-            currentStringTime = cPos;
-
-
-            mHandler.postDelayed(this, 100);
-            mSeekBar.setProgress(mediaPlayer.getCurrentPosition());
-            mProgressBar.setProgress(mediaPlayer.getCurrentPosition());
         }
     };
 
+    //Loading and controlling media player Done
 
-    //Binding Service to the client
+    //Data Related operations
 
-    private ServiceConnection serviceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            MediaPlayerService.LocalBinder binder = (MediaPlayerService.LocalBinder) iBinder;
-            mediaPlayer = binder.getService();
-            serviceBound = true;
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            serviceBound = false;
-        }
-    };
-
-    //binding service end
-
-    //Method to manage Shared preferences
+    private void readData() {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        trackTitle = preferences.getString("title", "");
+        trackSub = preferences.getString("sub", "");
+        trackImg = preferences.getString("img", "");
+        isLoading = preferences.getBoolean("loading", false);
+        playing = preferences.getBoolean("playing", false);
+        haveTrack = preferences.getBoolean("haveTrack", false);
+        currentTime = preferences.getInt("currentTime", 0);
+        currentStringTime = preferences.getString("currentStringTime", "");
+        duration = preferences.getString("duration", "");
+        intDuration = preferences.getInt("intDuration", 0);
+        loopStatus = preferences.getInt("loop", 1);
+        mediaQueue = preferences.getString("playlist", "");
+        isFav = preferences.getBoolean("fav", false);
+    }
 
     private void writeData() {
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         SharedPreferences.Editor editor = preferences.edit();
         editor.putString("title", trackTitle);
         editor.putString("sub", trackSub);
@@ -728,15 +990,30 @@ public class ArtistInYear extends AppCompatActivity {
         editor.putInt("intDuration", intDuration);
         editor.putString("duration", duration);
         editor.putInt("loop", loopStatus);
+        editor.putBoolean("fav", isFav);
+        editor.putString("playlist", mediaQueue);
+        editor.putBoolean("bound", serviceBound);
         editor.apply();
     }
 
-    //Method to manage shared preferences end
+    //Data Related operations Done
+
+    @Override
+    public void onBackPressed() {
+        if (drawerOpen) {
+            mDrawerLayout.closeDrawers();
+        } else if (expanded) {
+            sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+        } else {
+            finish();
+            overridePendingTransition(0, 0);
+            writeData();
+        }
+    }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            // Respond to the action bar's Up/Home button
             case android.R.id.home:
                 if (expanded) {
                     sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
@@ -747,32 +1024,28 @@ public class ArtistInYear extends AppCompatActivity {
                     overridePendingTransition(0, 0);
                     return true;
                 }
+            case R.id.srchBtn:
+                Intent intent = new Intent(this, Search.class);
+                startActivity(intent);
+                overridePendingTransition(0,0);
+                return true;
+            case R.id.showQueue:
+                mDrawerLayout.openDrawer(GravityCompat.END);
+                return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
     @Override
-    public void onBackPressed() {
+    public boolean onPrepareOptionsMenu(Menu menu) {
         if (expanded) {
-            sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+            getMenuInflater().inflate(R.menu.player_options_menu, menu);
+            return true;
         } else {
-            writeData();
-            finish();
-            overridePendingTransition(0, 0);
-            super.onBackPressed();
-        }
-    }
-
-    private boolean isOnline() {
-        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = cm.getActiveNetworkInfo();
-        return networkInfo != null && networkInfo.isConnected();
-    }
-
-    private class TryAgain implements View.OnClickListener {
-        @Override
-        public void onClick(View v) {
-            loadActivity();
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setDisplayShowHomeEnabled(true);
+            getMenuInflater().inflate(R.menu.main_menu, menu);
+            return true;
         }
     }
 }

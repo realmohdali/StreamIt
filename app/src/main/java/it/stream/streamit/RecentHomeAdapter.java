@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.google.gson.Gson;
@@ -69,48 +70,55 @@ public class RecentHomeAdapter extends RecyclerView.Adapter<RecentHomeAdapter.Vi
     @Override
     public void onBindViewHolder(@NonNull RecentHomeAdapter.ViewHolder viewHolder, final int i) {
 
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
+        serviceBound = sp.getBoolean("bound", false);
+
         Glide.with(mContext)
                 .asBitmap()
                 .load(mListItems.get(i).getImageUrl())
-                .apply(bitmapTransform(new RoundedCornersTransformation(5,0, RoundedCornersTransformation.CornerType.ALL)))
+                .apply(bitmapTransform(new RoundedCornersTransformation(5, 0, RoundedCornersTransformation.CornerType.ALL)))
                 .into(viewHolder.iv);
         viewHolder.t.setText(mListItems.get(i).getTitle());
 
         viewHolder.cv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String URL = mListItems.get(i).getURL();
-                String title = mListItems.get(i).getTitle();
-                String sub = mListItems.get(i).getArtist();
-                sub += " | ";
-                sub += mListItems.get(i).getYear();
-                String img = mListItems.get(i).getImageUrl();
-                Gson gson = new Gson();
-                String json = gson.toJson(mListItems);
-                int size = mListItems.size();
-                int pos = i;
+                if (ConnectionCheck.isConnected(mContext)) {
+                    String URL = mListItems.get(i).getURL();
+                    String title = mListItems.get(i).getTitle();
+                    String sub = mListItems.get(i).getArtist();
+                    sub += " | ";
+                    sub += mListItems.get(i).getYear();
+                    String img = mListItems.get(i).getImageUrl();
+                    Gson gson = new Gson();
+                    String json = gson.toJson(mListItems);
+                    int size = mListItems.size();
+                    int pos = i;
 
-                if (!serviceBound) {
-                    Intent playerIntent = new Intent(mContext, MediaPlayerService.class);
-                    playerIntent.putExtra("media", URL);
-                    playerIntent.putExtra("title", title);
-                    playerIntent.putExtra("sub", sub);
-                    playerIntent.putExtra("img", img);
-                    playerIntent.putExtra("playlist", json);
-                    playerIntent.putExtra("size", size);
-                    playerIntent.putExtra("position", pos);
-                    mContext.startService(playerIntent);
-                    mContext.bindService(playerIntent, serviceConnection, Context.BIND_ABOVE_CLIENT);
+                    if (!serviceBound) {
+                        Intent playerIntent = new Intent(mContext, MediaPlayerService.class);
+                        playerIntent.putExtra("media", URL);
+                        playerIntent.putExtra("title", title);
+                        playerIntent.putExtra("sub", sub);
+                        playerIntent.putExtra("img", img);
+                        playerIntent.putExtra("playlist", json);
+                        playerIntent.putExtra("size", size);
+                        playerIntent.putExtra("position", pos);
+                        mContext.startService(playerIntent);
+                        mContext.bindService(playerIntent, serviceConnection, Context.BIND_ABOVE_CLIENT);
+                    } else {
+                        Intent broadcastIntent = new Intent(Broadcast_PLAY_NEW_AUDIO);
+                        broadcastIntent.putExtra("media", URL);
+                        broadcastIntent.putExtra("title", title);
+                        broadcastIntent.putExtra("sub", sub);
+                        broadcastIntent.putExtra("img", img);
+                        broadcastIntent.putExtra("playlist", json);
+                        broadcastIntent.putExtra("size", size);
+                        broadcastIntent.putExtra("position", pos);
+                        mContext.sendBroadcast(broadcastIntent);
+                    }
                 } else {
-                    Intent broadcastIntent = new Intent(Broadcast_PLAY_NEW_AUDIO);
-                    broadcastIntent.putExtra("media", URL);
-                    broadcastIntent.putExtra("title", title);
-                    broadcastIntent.putExtra("sub", sub);
-                    broadcastIntent.putExtra("img", img);
-                    broadcastIntent.putExtra("playlist", json);
-                    broadcastIntent.putExtra("size", size);
-                    broadcastIntent.putExtra("position", pos);
-                    mContext.sendBroadcast(broadcastIntent);
+                    Toast.makeText(mContext, R.string.offline, Toast.LENGTH_SHORT).show();
                 }
             }
         });

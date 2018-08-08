@@ -1,5 +1,6 @@
 package it.stream.streamit;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.support.annotation.NonNull;
@@ -10,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 
@@ -23,10 +25,12 @@ class ArtistHomeAdapter extends RecyclerView.Adapter<ArtistHomeAdapter.ViewHolde
 
     private List<ArtistList> mArtistList;
     private Context mContext;
+    private Activity mActivity;
 
-    public ArtistHomeAdapter(List<ArtistList> mArtistList, Context mContext) {
+    public ArtistHomeAdapter(List<ArtistList> mArtistList, Context mContext, Activity mActivity) {
         this.mArtistList = mArtistList;
         this.mContext = mContext;
+        this.mActivity = mActivity;
     }
 
     @NonNull
@@ -43,16 +47,21 @@ class ArtistHomeAdapter extends RecyclerView.Adapter<ArtistHomeAdapter.ViewHolde
         Glide.with(mContext)
                 .asBitmap()
                 .load(mArtistList.get(i).getImageUrl())
-                .apply(bitmapTransform(new RoundedCornersTransformation(5,0, RoundedCornersTransformation.CornerType.ALL)))
+                .apply(bitmapTransform(new RoundedCornersTransformation(5, 0, RoundedCornersTransformation.CornerType.ALL)))
                 .into(viewHolder.iv);
         final String image = mArtistList.get(i).getImageUrl();
         viewHolder.cv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent mIntent = new Intent(view.getContext(), YearInArtist.class);
-                mIntent.putExtra("artist", mArtistList.get(i).getArtist());
-                mIntent.putExtra("image", image);
-                view.getContext().startActivity(mIntent);
+                if (ConnectionCheck.isConnected(mContext)) {
+                    Intent mIntent = new Intent(view.getContext(), YearInArtist.class);
+                    mIntent.putExtra("artist", mArtistList.get(i).getArtist());
+                    mIntent.putExtra("image", image);
+                    view.getContext().startActivity(mIntent);
+                    mActivity.overridePendingTransition(0, 0);
+                } else {
+                    Toast.makeText(mContext, R.string.offline, Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }

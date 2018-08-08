@@ -10,16 +10,20 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
+import android.support.design.widget.CollapsingToolbarLayout;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.telephony.PhoneStateListener;
@@ -97,6 +101,12 @@ public class MediaPlayerService extends Service
     public static final String Action_Pause = "it.stream.streamit.ACTION_PAUSE";
     public static final String Kill_Player = "it.stream.streamit.KILL_PLAYER";
 
+    private FavoriteManagement favoriteManagement;
+    private SQLiteDatabase db;
+    private boolean isFav;
+
+    private String json = "";
+
     /*
     Notification Stuff
      */
@@ -151,9 +161,14 @@ public class MediaPlayerService extends Service
         Intent resumeIntent = new Intent(this, MainActivity.class);
         resumeIntent.setAction(Intent.ACTION_MAIN);
         resumeIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        //resumeIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent resumePendingIntent = PendingIntent.getActivity(this, 0, resumeIntent, 0);
 
-        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this, "default")
+        Intent stopIntent = new Intent(Kill_Player);
+        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(this, 0, stopIntent, 0);
+
+        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this,
+                getResources().getString(R.string.notification_channel_id))
                 .setSmallIcon(R.drawable.ic_notifiction_icon)
                 .setLargeIcon(bitmap)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -162,21 +177,28 @@ public class MediaPlayerService extends Service
                 .setCustomContentView(remoteViews)
                 .setPriority(Notification.PRIORITY_MAX)
                 .setOngoing(Flag_Sticky)
-                .setContentIntent(resumePendingIntent);
+                .setContentIntent(resumePendingIntent)
+                .addAction(R.drawable.ic_stop, getString(R.string.stop), stopPendingIntent);
 
-        notificationManagerCompat = NotificationManagerCompat.from(this);
-        notificationManagerCompat.notify(100, mBuilder.build());
+        //notificationManagerCompat = NotificationManagerCompat.from(this);
+
+        startForeground(100, mBuilder.build());
+
+        //notificationManagerCompat.notify(100, mBuilder.build());
     }
 
     private void createNotificationChannel() {
         // Create the NotificationChannel, but only on API 26+ because
         // the NotificationChannel class is new and not in the support library
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            CharSequence name = "default";
-            String description = "The default notification channel";
-            int importance = NotificationManager.IMPORTANCE_HIGH;
-            NotificationChannel channel = new NotificationChannel("default", name, importance);
+            CharSequence name = "MatamNotification";
+            String description = "Matam | Labbaik Ya Hussain";
+            int importance = NotificationManager.IMPORTANCE_MIN;
+            NotificationChannel channel = new NotificationChannel(getResources().getString(R.string.notification_channel_id),
+                    getResources().getString(R.string.notification_channel_name), importance);
+
             channel.setDescription(description);
+            channel.setLightColor(Color.GREEN);
             // Register the channel with the system; you can't change the importance
             // or other notification behaviors after this
             NotificationManager notificationManager = getSystemService(NotificationManager.class);
@@ -224,7 +246,9 @@ public class MediaPlayerService extends Service
 
         registerNotificationPlay();
         registerNotificationPause();
-        createNotificationChannel();
+
+
+        db = openOrCreateDatabase("favorite", MODE_PRIVATE, null);
 
         try {
             //An audio file is passed to service through push extra
@@ -234,7 +258,7 @@ public class MediaPlayerService extends Service
             img = intent.getExtras().getString("img");
 
             //Playlist
-            String json = intent.getExtras().getString("playlist");
+            json = intent.getExtras().getString("playlist");
             Type type = new TypeToken<List<ListItem>>() {
             }.getType();
             Gson gson = new Gson();
@@ -255,10 +279,17 @@ public class MediaPlayerService extends Service
 
         //init media player
         if (mediaFile != null && mediaFile != "") {
+
+            favoriteManagement = new FavoriteManagement(mediaFile, db);
+            isFav = favoriteManagement.alreadyExists();
+
             Intent intent1 = new Intent(New_Audio);
             intent1.putExtra("title", title);
             intent1.putExtra("sub", sub);
             intent1.putExtra("img", img);
+            intent1.putExtra("url", mediaFile);
+            intent1.putExtra("fav", isFav);
+            intent1.putExtra("playlist", json);
             sendBroadcast(intent1);
 
             stopMedia();
@@ -291,6 +322,8 @@ public class MediaPlayerService extends Service
         registerBecomingNoisyReceiver();
         //listen for new audio to play
         register_playNewAudio();
+        //Start Notification channel
+        createNotificationChannel();
     }
 
     @Override
@@ -299,7 +332,7 @@ public class MediaPlayerService extends Service
         if (mediaPlayer != null) {
             //stopMedia();
             mediaPlayer.release();
-            notificationManagerCompat.cancel(100);
+            stopForeground(true);
         }
         removeAudioFocus();
 
@@ -355,7 +388,8 @@ public class MediaPlayerService extends Service
         if (loop == loopOne) {
             mediaPlayer.seekTo(0);
             playMedia();
-        } else if (loop == loopAll) {
+        }
+        if (loop == loopAll) {
             if (!(playlistPosition == playlistSize - 1)) {
                 playlistPosition++;
                 title = mPlaylist.get(playlistPosition).getTitle();
@@ -366,10 +400,16 @@ public class MediaPlayerService extends Service
                 st += mPlaylist.get(playlistPosition).getYear();
                 sub = st;
 
+                favoriteManagement = new FavoriteManagement(mediaFile, db);
+                isFav = favoriteManagement.alreadyExists();
+
                 Intent intent1 = new Intent(New_Audio);
                 intent1.putExtra("title", title);
                 intent1.putExtra("sub", sub);
                 intent1.putExtra("img", img);
+                intent1.putExtra("url", mediaFile);
+                intent1.putExtra("fav", isFav);
+                intent1.putExtra("playlist", json);
                 sendBroadcast(intent1);
 
                 stopMedia();
@@ -388,10 +428,16 @@ public class MediaPlayerService extends Service
                 st += mPlaylist.get(playlistPosition).getYear();
                 sub = st;
 
+                favoriteManagement = new FavoriteManagement(mediaFile, db);
+                isFav = favoriteManagement.alreadyExists();
+
                 Intent intent1 = new Intent(New_Audio);
                 intent1.putExtra("title", title);
                 intent1.putExtra("sub", sub);
                 intent1.putExtra("img", img);
+                intent1.putExtra("url", mediaFile);
+                intent1.putExtra("fav", isFav);
+                intent1.putExtra("playlist", json);
                 sendBroadcast(intent1);
 
                 stopMedia();
@@ -401,7 +447,8 @@ public class MediaPlayerService extends Service
 
                 showNotif(Status.Loading);
             }
-        } else if (loop == noLoop) {
+        }
+        if (loop == noLoop) {
             if (!(playlistPosition == playlistSize - 1)) {
                 playlistPosition++;
                 title = mPlaylist.get(playlistPosition).getTitle();
@@ -412,10 +459,16 @@ public class MediaPlayerService extends Service
                 st += mPlaylist.get(playlistPosition).getYear();
                 sub = st;
 
+                favoriteManagement = new FavoriteManagement(mediaFile, db);
+                isFav = favoriteManagement.alreadyExists();
+
                 Intent intent1 = new Intent(New_Audio);
                 intent1.putExtra("title", title);
                 intent1.putExtra("sub", sub);
                 intent1.putExtra("img", img);
+                intent1.putExtra("url", mediaFile);
+                intent1.putExtra("fav", isFav);
+                intent1.putExtra("playlist", json);
                 sendBroadcast(intent1);
 
                 stopMedia();
@@ -427,7 +480,8 @@ public class MediaPlayerService extends Service
             } else {
                 Intent killPlayer = new Intent(Kill_Player);
                 sendBroadcast(killPlayer);
-                notificationManagerCompat.cancel(100);
+                stopForeground(true);
+                //notificationManagerCompat.cancel(100);
             }
         }
     }
@@ -436,10 +490,16 @@ public class MediaPlayerService extends Service
     public boolean onError(android.media.MediaPlayer mediaPlayer, int i, int i1) {
         switch (i) {
             case MediaPlayer.MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK:
+                System.out.println("MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK");
                 break;
             case MediaPlayer.MEDIA_ERROR_SERVER_DIED:
+                System.out.println("MEDIA_ERROR_SERVER_DIED");
                 break;
             case MediaPlayer.MEDIA_ERROR_UNKNOWN:
+                System.out.println("MEDIA_ERROR_UNKNOWN");
+                break;
+            case MediaPlayer.MEDIA_ERROR_IO:
+                System.out.println("Error IO");
                 break;
         }
         return false;
@@ -563,7 +623,7 @@ public class MediaPlayerService extends Service
                 img = intent.getExtras().getString("img");
 
                 //Playlist
-                String json = intent.getExtras().getString("playlist");
+                json = intent.getExtras().getString("playlist");
                 Type type = new TypeToken<List<ListItem>>() {
                 }.getType();
                 Gson gson = new Gson();
@@ -576,10 +636,16 @@ public class MediaPlayerService extends Service
                 stopSelf();
             }
 
+            favoriteManagement = new FavoriteManagement(mediaFile, db);
+            isFav = favoriteManagement.alreadyExists();
+
             Intent intent1 = new Intent(New_Audio);
             intent1.putExtra("title", title);
             intent1.putExtra("sub", sub);
             intent1.putExtra("img", img);
+            intent1.putExtra("url", mediaFile);
+            intent1.putExtra("fav", isFav);
+            intent1.putExtra("playlist", json);
             sendBroadcast(intent1);
 
             stopMedia();
@@ -621,6 +687,7 @@ public class MediaPlayerService extends Service
             e.printStackTrace();
             stopSelf();
         }
+        mediaPlayer.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK);
         mediaPlayer.prepareAsync();
     }
 
@@ -635,6 +702,8 @@ public class MediaPlayerService extends Service
         else {
             mediaPlayer.stop();
             mediaPlayer.release();
+            stopForeground(true);
+            //notificationManagerCompat.cancel(100);
         }
     }
 
@@ -689,10 +758,16 @@ public class MediaPlayerService extends Service
             st += mPlaylist.get(playlistPosition).getYear();
             sub = st;
 
+            favoriteManagement = new FavoriteManagement(mediaFile, db);
+            isFav = favoriteManagement.alreadyExists();
+
             Intent intent1 = new Intent(New_Audio);
             intent1.putExtra("title", title);
             intent1.putExtra("sub", sub);
             intent1.putExtra("img", img);
+            intent1.putExtra("url", mediaFile);
+            intent1.putExtra("fav", isFav);
+            intent1.putExtra("playlist", json);
             sendBroadcast(intent1);
 
             stopMedia();
@@ -715,10 +790,16 @@ public class MediaPlayerService extends Service
             st += mPlaylist.get(playlistPosition).getYear();
             sub = st;
 
+            favoriteManagement = new FavoriteManagement(mediaFile, db);
+            isFav = favoriteManagement.alreadyExists();
+
             Intent intent1 = new Intent(New_Audio);
             intent1.putExtra("title", title);
             intent1.putExtra("sub", sub);
             intent1.putExtra("img", img);
+            intent1.putExtra("url", mediaFile);
+            intent1.putExtra("fav", isFav);
+            intent1.putExtra("playlist", json);
             sendBroadcast(intent1);
 
             stopMedia();
@@ -737,6 +818,9 @@ public class MediaPlayerService extends Service
     }
 
     public int getCurrentPosition() {
+        if (!ConnectionCheck.isConnected(this)) {
+            pauseMedia();
+        }
         int cp = mediaPlayer.getCurrentPosition();
         return cp;
     }

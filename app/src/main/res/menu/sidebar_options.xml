@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group
+        android:id="@+id/navigation"
+        android:checkableBehavior="single">
+        <item
+            android:id="@+id/homePage"
+            android:icon="@drawable/ic_home"
+            android:title="@string/home" />
+        <item
+            android:id="@+id/favOption"
+            android:icon="@drawable/ic_favorite_green_24dp"
+            android:title="@string/favorite" />
+    </group>
+    <group
+        android:id="@+id/features"
+        android:checkableBehavior="single">
+        <item
+            android:id="@+id/about"
+            android:icon="@drawable/ic_info"
+            android:title="@string/about" />
+    </group>
+</menu>
