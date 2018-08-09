@@ -1,12 +1,9 @@
-package it.stream.streamit;
+package it.stream.streamit.tabFragments;
 
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -36,6 +33,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import it.stream.streamit.R;
+import it.stream.streamit.adapters.AlbumAdapter;
+import it.stream.streamit.backgroundService.MediaService;
+import it.stream.streamit.dataList.ListItem;
+
 public class Album_Tab_Fragment extends Fragment {
 
     private String year, artist;
@@ -46,6 +48,8 @@ public class Album_Tab_Fragment extends Fragment {
     private Button playAll;
 
     private RelativeLayout mRelativeLayout;
+
+    String url, title, sub, img, json;
 
     private static final String URL = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showAlbum.php";
 
@@ -104,8 +108,6 @@ public class Album_Tab_Fragment extends Fragment {
 
                                 String image = "http://realmohdali.000webhostapp.com/streamIt/";
                                 image += jsonObject.getString("image");
-                                /*String link = "http://realmohdali.000webhostapp.com/streamIt/";
-                                link += jsonObject.getString("url");*/
                                 String link = jsonObject.getString("url");
                                 String title = jsonObject.getString("title");
 
@@ -141,26 +143,12 @@ public class Album_Tab_Fragment extends Fragment {
         requestQueue.add(stringRequest);
     }
 
-    ServiceConnection serviceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            //MediaPlayerService.LocalBinder binder = (MediaPlayerService.LocalBinder) iBinder;
-            //MediaPlayerService mediaPlayer = binder.getService();
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-
-        }
-    };
-
     private void playAll() {
 
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
-        boolean serviceBound = sp.getBoolean("bound", false);
+        final boolean serviceRunning = sp.getBoolean("serviceRunning", false);
 
-        String url, title, sub, img, json;
-        int size, i;
+        int i;
 
         url = mList.get(0).getURL();
         title = mList.get(0).getTitle();
@@ -169,33 +157,37 @@ public class Album_Tab_Fragment extends Fragment {
         sub += mList.get(0).getYear();
         img = mList.get(0).getImageUrl();
 
+        writeData();
+
         Gson gson = new Gson();
         json = gson.toJson(mList);
-        size = mList.size();
 
         i = 0;
 
-        if (!serviceBound) {
-            Intent intent = new Intent(context, MediaPlayerService.class);
-            intent.putExtra("media", url);
-            intent.putExtra("title", title);
-            intent.putExtra("sub", sub);
-            intent.putExtra("img", img);
+        if (!serviceRunning) {
+            Intent intent = new Intent(context, MediaService.class);
             intent.putExtra("playlist", json);
-            intent.putExtra("size", size);
-            intent.putExtra("position", i);
+            intent.putExtra("pos", i);
+            intent.putExtra("isPlayList", true);
             context.startService(intent);
-            context.bindService(intent, serviceConnection, Context.BIND_ABOVE_CLIENT);
         } else {
             Intent intent = new Intent(Broadcast_PLAY_NEW_AUDIO);
-            intent.putExtra("media", url);
-            intent.putExtra("title", title);
-            intent.putExtra("sub", sub);
-            intent.putExtra("img", img);
             intent.putExtra("playlist", json);
-            intent.putExtra("size", size);
-            intent.putExtra("position", i);
+            intent.putExtra("pos", i);
+            intent.putExtra("isPlayList", true);
             context.sendBroadcast(intent);
         }
+    }
+
+    private void writeData() {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString("title", title);
+        editor.putString("sub", sub);
+        editor.putString("img", img);
+        editor.putString("artist", artist);
+        editor.putString("year", year);
+        editor.putString("media", url);
+        editor.apply();
     }
 }

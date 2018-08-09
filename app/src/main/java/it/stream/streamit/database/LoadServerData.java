@@ -1,4 +1,4 @@
-package it.stream.streamit;
+package it.stream.streamit.database;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
@@ -17,6 +17,8 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+import it.stream.streamit.dataList.ListItem;
+
 public class LoadServerData {
     private SQLiteDatabase database;
     private Context context;
@@ -24,7 +26,7 @@ public class LoadServerData {
 
     private static final String URL = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showAll.php";
 
-    LoadServerData(SQLiteDatabase database, Context context) {
+    public LoadServerData(SQLiteDatabase database, Context context) {
         this.database = database;
         this.context = context;
         mList = new ArrayList<>();

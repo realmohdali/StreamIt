@@ -1,4 +1,4 @@
-package it.stream.streamit;
+package it.stream.streamit.dataList;
 
 public class ListItem {
     private String title;

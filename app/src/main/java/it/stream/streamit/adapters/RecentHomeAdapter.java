@@ -1,15 +1,9 @@
-package it.stream.streamit;
+package it.stream.streamit.adapters;
 
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.media.MediaPlayer;
-import android.os.Bundle;
-import android.os.IBinder;
 import android.preference.PreferenceManager;
-import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
@@ -21,11 +15,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
-import com.google.gson.Gson;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import it.stream.streamit.database.ConnectionCheck;
+import it.stream.streamit.dataList.ListItem;
+import it.stream.streamit.R;
+import it.stream.streamit.backgroundService.MediaService;
 import jp.wasabeef.glide.transformations.RoundedCornersTransformation;
 
 import static com.bumptech.glide.request.RequestOptions.bitmapTransform;
@@ -34,8 +31,8 @@ public class RecentHomeAdapter extends RecyclerView.Adapter<RecentHomeAdapter.Vi
 
     private List<ListItem> mListItems;
     private Context mContext;
-    private MediaPlayerService mediaPlayer;
-    private boolean serviceBound = false;
+
+    private String title, url, sub, img, artist, year;
 
     public static final String Broadcast_PLAY_NEW_AUDIO = "it.stream.streamit.PlayNewAudio";
 
@@ -45,33 +42,18 @@ public class RecentHomeAdapter extends RecyclerView.Adapter<RecentHomeAdapter.Vi
         this.mContext = mContext;
     }
 
-    private ServiceConnection serviceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            MediaPlayerService.LocalBinder binder = (MediaPlayerService.LocalBinder) iBinder;
-            mediaPlayer = binder.getService();
-            serviceBound = true;
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-
-        }
-    };
-
     @NonNull
     @Override
     public RecentHomeAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
         View v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.list_item, viewGroup, false);
-        ViewHolder mViewHolder = new ViewHolder(v);
-        return mViewHolder;
+        return new ViewHolder(v);
     }
 
     @Override
     public void onBindViewHolder(@NonNull RecentHomeAdapter.ViewHolder viewHolder, final int i) {
 
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
-        serviceBound = sp.getBoolean("bound", false);
+        final boolean serviceRunning = sp.getBoolean("serviceRunning", false);
 
         Glide.with(mContext)
                 .asBitmap()
@@ -84,38 +66,25 @@ public class RecentHomeAdapter extends RecyclerView.Adapter<RecentHomeAdapter.Vi
             @Override
             public void onClick(View view) {
                 if (ConnectionCheck.isConnected(mContext)) {
-                    String URL = mListItems.get(i).getURL();
-                    String title = mListItems.get(i).getTitle();
-                    String sub = mListItems.get(i).getArtist();
+                    url = mListItems.get(i).getURL();
+                    title = mListItems.get(i).getTitle();
+                    sub = mListItems.get(i).getArtist();
                     sub += " | ";
                     sub += mListItems.get(i).getYear();
-                    String img = mListItems.get(i).getImageUrl();
-                    Gson gson = new Gson();
-                    String json = gson.toJson(mListItems);
-                    int size = mListItems.size();
-                    int pos = i;
+                    img = mListItems.get(i).getImageUrl();
+                    year = mListItems.get(i).getYear();
+                    artist = mListItems.get(i).getArtist();
 
-                    if (!serviceBound) {
-                        Intent playerIntent = new Intent(mContext, MediaPlayerService.class);
-                        playerIntent.putExtra("media", URL);
-                        playerIntent.putExtra("title", title);
-                        playerIntent.putExtra("sub", sub);
-                        playerIntent.putExtra("img", img);
-                        playerIntent.putExtra("playlist", json);
-                        playerIntent.putExtra("size", size);
-                        playerIntent.putExtra("position", pos);
-                        mContext.startService(playerIntent);
-                        mContext.bindService(playerIntent, serviceConnection, Context.BIND_ABOVE_CLIENT);
+                    writeData();
+
+                    if (!serviceRunning) {
+                        Intent intent = new Intent(mContext, MediaService.class);
+                        intent.putExtra("isPlayList", false);
+                        mContext.startService(intent);
                     } else {
-                        Intent broadcastIntent = new Intent(Broadcast_PLAY_NEW_AUDIO);
-                        broadcastIntent.putExtra("media", URL);
-                        broadcastIntent.putExtra("title", title);
-                        broadcastIntent.putExtra("sub", sub);
-                        broadcastIntent.putExtra("img", img);
-                        broadcastIntent.putExtra("playlist", json);
-                        broadcastIntent.putExtra("size", size);
-                        broadcastIntent.putExtra("position", pos);
-                        mContext.sendBroadcast(broadcastIntent);
+                        Intent intent = new Intent(Broadcast_PLAY_NEW_AUDIO);
+                        intent.putExtra("isPlayList", false);
+                        mContext.sendBroadcast(intent);
                     }
                 } else {
                     Toast.makeText(mContext, R.string.offline, Toast.LENGTH_SHORT).show();
@@ -130,9 +99,6 @@ public class RecentHomeAdapter extends RecyclerView.Adapter<RecentHomeAdapter.Vi
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        //TextView mTextViewHead;
-        //TextView mTextViewDes;
-
         ImageView iv;
         TextView t;
         CardView cv;
@@ -143,5 +109,17 @@ public class RecentHomeAdapter extends RecyclerView.Adapter<RecentHomeAdapter.Vi
             t = itemView.findViewById(R.id.title);
             cv = itemView.findViewById(R.id.cardView);
         }
+    }
+
+    private void writeData() {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(mContext);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString("title", title);
+        editor.putString("sub", sub);
+        editor.putString("img", img);
+        editor.putString("artist", artist);
+        editor.putString("year", year);
+        editor.putString("media", url);
+        editor.apply();
     }
 }

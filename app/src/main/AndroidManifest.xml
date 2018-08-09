@@ -14,13 +14,9 @@
         android:roundIcon="@mipmap/ic_launcher_new_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <service
-            android:name=".MediaPlayerService"
-            android:stopWithTask="false" />
 
         <activity
             android:name=".MainActivity"
-            android:launchMode="singleTop"
             android:screenOrientation="nosensor"
             android:theme="@style/tabTheme">
             <intent-filter>
@@ -29,6 +25,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <activity
             android:name=".YearInArtist"
             android:screenOrientation="nosensor"
@@ -46,6 +43,15 @@
             android:screenOrientation="nosensor"
             android:theme="@style/tabTheme"
             android:windowSoftInputMode="stateAlwaysVisible"></activity>
+
+        <service android:name=".backgroundService.MediaService" />
+
+        <receiver android:name="android.support.v4.media.session.MediaButtonReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+                <action android:name="android.media.AUDIO_BECOMING_NOISY" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

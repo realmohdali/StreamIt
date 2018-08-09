@@ -1,4 +1,4 @@
-package it.stream.streamit;
+package it.stream.streamit.adapters;
 
 import android.app.Activity;
 import android.content.Context;
@@ -17,18 +17,21 @@ import com.bumptech.glide.Glide;
 
 import java.util.List;
 
+import it.stream.streamit.ArtistInYear;
+import it.stream.streamit.database.ConnectionCheck;
+import it.stream.streamit.R;
+import it.stream.streamit.dataList.YearList;
 import jp.wasabeef.glide.transformations.RoundedCornersTransformation;
 
 import static com.bumptech.glide.request.RequestOptions.bitmapTransform;
 
-class ArtistHomeAdapter extends RecyclerView.Adapter<ArtistHomeAdapter.ViewHolder> {
-
-    private List<ArtistList> mArtistList;
+public class YearHomeAdapter extends RecyclerView.Adapter<YearHomeAdapter.ViewHolder> {
+    private List<YearList> mYearList;
     private Context mContext;
     private Activity mActivity;
 
-    public ArtistHomeAdapter(List<ArtistList> mArtistList, Context mContext, Activity mActivity) {
-        this.mArtistList = mArtistList;
+    public YearHomeAdapter(Context mContext, List<YearList> mYearList, Activity mActivity) {
+        this.mYearList = mYearList;
         this.mContext = mContext;
         this.mActivity = mActivity;
     }
@@ -37,27 +40,25 @@ class ArtistHomeAdapter extends RecyclerView.Adapter<ArtistHomeAdapter.ViewHolde
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
         View v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.list_item, viewGroup, false);
-        ViewHolder mViewHolder = new ViewHolder(v);
-        return mViewHolder;
+        ViewHolder viewHolder = new ViewHolder(v);
+        return viewHolder;
     }
 
     @Override
-    public void onBindViewHolder(@NonNull final ViewHolder viewHolder, final int i) {
-        viewHolder.t.setText(mArtistList.get(i).getArtist());
+    public void onBindViewHolder(@NonNull ViewHolder viewHolder, final int i) {
+        viewHolder.t.setText(mYearList.get(i).getYear());
         Glide.with(mContext)
                 .asBitmap()
-                .load(mArtistList.get(i).getImageUrl())
+                .load(mYearList.get(i).getImageUrl())
                 .apply(bitmapTransform(new RoundedCornersTransformation(5, 0, RoundedCornersTransformation.CornerType.ALL)))
                 .into(viewHolder.iv);
-        final String image = mArtistList.get(i).getImageUrl();
         viewHolder.cv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if (ConnectionCheck.isConnected(mContext)) {
-                    Intent mIntent = new Intent(view.getContext(), YearInArtist.class);
-                    mIntent.putExtra("artist", mArtistList.get(i).getArtist());
-                    mIntent.putExtra("image", image);
-                    view.getContext().startActivity(mIntent);
+                    Intent intent = new Intent(view.getContext(), ArtistInYear.class);
+                    intent.putExtra("year", mYearList.get(i).getYear());
+                    view.getContext().startActivity(intent);
                     mActivity.overridePendingTransition(0, 0);
                 } else {
                     Toast.makeText(mContext, R.string.offline, Toast.LENGTH_SHORT).show();
@@ -68,7 +69,7 @@ class ArtistHomeAdapter extends RecyclerView.Adapter<ArtistHomeAdapter.ViewHolde
 
     @Override
     public int getItemCount() {
-        return mArtistList.size();
+        return mYearList.size();
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {

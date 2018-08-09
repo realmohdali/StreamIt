@@ -1,11 +1,12 @@
-package it.stream.streamit;
+package it.stream.streamit.adapters;
 
 import android.app.Activity;
-import android.app.ActivityManager;
 import android.content.Context;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
+
+import it.stream.streamit.tabFragments.Home_Tab_Fragment;
 
 public class PagerAdapter extends FragmentStatePagerAdapter {
 

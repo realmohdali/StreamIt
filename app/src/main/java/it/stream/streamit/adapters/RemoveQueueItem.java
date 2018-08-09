@@ -1,4 +1,4 @@
-package it.stream.streamit;
+package it.stream.streamit.adapters;
 
 import android.graphics.Canvas;
 import android.support.annotation.NonNull;
@@ -6,10 +6,10 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.View;
 
-public class SwipeToRemove extends ItemTouchHelper.SimpleCallback {
+public class RemoveQueueItem extends ItemTouchHelper.SimpleCallback {
     private SwipeToRemoveListener listener;
 
-    public SwipeToRemove(int dragDirs, int swipeDirs, SwipeToRemoveListener listener) {
+    public RemoveQueueItem(int dragDirs, int swipeDirs, SwipeToRemoveListener listener) {
         super(dragDirs, swipeDirs);
         this.listener = listener;
     }
@@ -22,7 +22,7 @@ public class SwipeToRemove extends ItemTouchHelper.SimpleCallback {
     @Override
     public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
         if (viewHolder != null) {
-            final View foregroundView = ((FavAdapter.ViewHolder) viewHolder).foreground;
+            final View foregroundView = ((QueueAdapter.ViewHolder) viewHolder).foreground;
 
             getDefaultUIUtil().onSelected(foregroundView);
         }
@@ -32,14 +32,14 @@ public class SwipeToRemove extends ItemTouchHelper.SimpleCallback {
     public void onChildDrawOver(Canvas c, RecyclerView recyclerView,
                                 RecyclerView.ViewHolder viewHolder, float dX, float dY,
                                 int actionState, boolean isCurrentlyActive) {
-        final View foregroundView = ((FavAdapter.ViewHolder) viewHolder).foreground;
+        final View foregroundView = ((QueueAdapter.ViewHolder) viewHolder).foreground;
         getDefaultUIUtil().onDrawOver(c, recyclerView, foregroundView, dX, dY,
                 actionState, isCurrentlyActive);
     }
 
     @Override
     public void clearView(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
-        final View foregroundView = ((FavAdapter.ViewHolder) viewHolder).foreground;
+        final View foregroundView = ((QueueAdapter.ViewHolder) viewHolder).foreground;
         getDefaultUIUtil().clearView(foregroundView);
     }
 
@@ -47,7 +47,7 @@ public class SwipeToRemove extends ItemTouchHelper.SimpleCallback {
     public void onChildDraw(Canvas c, RecyclerView recyclerView,
                             RecyclerView.ViewHolder viewHolder, float dX, float dY,
                             int actionState, boolean isCurrentlyActive) {
-        final View foregroundView = ((FavAdapter.ViewHolder) viewHolder).foreground;
+        final View foregroundView = ((QueueAdapter.ViewHolder) viewHolder).foreground;
 
         getDefaultUIUtil().onDraw(c, recyclerView, foregroundView, dX, dY,
                 actionState, isCurrentlyActive);

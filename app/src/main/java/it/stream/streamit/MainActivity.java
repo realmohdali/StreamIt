@@ -3,18 +3,14 @@ package it.stream.streamit;
 import android.Manifest;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Handler;
-import android.os.IBinder;
-import android.preference.Preference;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomSheetBehavior;
@@ -27,16 +23,13 @@ import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
-import android.telephony.TelephonyManager;
-import android.view.KeyEvent;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewStub;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -51,14 +44,30 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
-import java.sql.Connection;
 import java.util.List;
 
-import static it.stream.streamit.MediaPlayerService.Action_Pause;
-import static it.stream.streamit.MediaPlayerService.Action_Play;
-import static it.stream.streamit.MediaPlayerService.Kill_Player;
+import it.stream.streamit.adapters.PagerAdapter;
+import it.stream.streamit.adapters.QueueAdapter;
+import it.stream.streamit.adapters.RemoveQueueItem;
+import it.stream.streamit.backgroundService.MediaService;
+import it.stream.streamit.dataList.ListItem;
+import it.stream.streamit.database.ConnectionCheck;
+import it.stream.streamit.database.FavoriteManagement;
+import it.stream.streamit.database.LoadServerData;
 
-public class MainActivity extends AppCompatActivity {
+import static it.stream.streamit.backgroundService.MediaPlayerControllerConstants.ACTION_NEXT;
+import static it.stream.streamit.backgroundService.MediaPlayerControllerConstants.ACTION_PAUSE;
+import static it.stream.streamit.backgroundService.MediaPlayerControllerConstants.ACTION_PLAY;
+import static it.stream.streamit.backgroundService.MediaPlayerControllerConstants.ACTION_PREV;
+import static it.stream.streamit.backgroundService.MediaPlayerControllerConstants.ACTION_SEEK;
+import static it.stream.streamit.backgroundService.MediaPlayerControllerConstants.ACTION_STOP;
+import static it.stream.streamit.backgroundService.MediaPlayerControllerConstants.SEEK_UPDATE;
+import static it.stream.streamit.backgroundService.MediaService.Broadcast_PLAYER_PREPARED;
+import static it.stream.streamit.backgroundService.MediaService.Buffering_Update;
+import static it.stream.streamit.backgroundService.MediaService.New_Audio;
+import static it.stream.streamit.backgroundService.MediaService.buffering_End;
+
+public class MainActivity extends AppCompatActivity implements RemoveQueueItem.SwipeToRemoveListener {
 
     private Toolbar toolbar;
     private DrawerLayout mDrawerLayout;
@@ -67,14 +76,12 @@ public class MainActivity extends AppCompatActivity {
     private RelativeLayout mediaPlayerUI;
     private String trackUrl;
     private SQLiteDatabase db;
-    private SQLiteDatabase search;
 
 
     private String mediaQueue;
 
-    private MediaPlayerService mediaPlayer;
     private boolean playing;
-    private boolean serviceBound;
+    private boolean serviceRunning;
 
     private Activity mActivity = (Activity) this;
 
@@ -95,8 +102,6 @@ public class MainActivity extends AppCompatActivity {
     private boolean isFav;
     private int loopStatus;
 
-    private Handler mHandler;
-    private boolean running = false;
 
     private BottomSheetBehavior sheetBehavior;
 
@@ -115,13 +120,29 @@ public class MainActivity extends AppCompatActivity {
 
     private int marginInPx;
 
+    private boolean killed = true;
+
+    private QueueAdapter adapter;
+    private int playerPosition;
+    private LinearLayoutManager linearLayoutManager;
+
+    //______________________________________________________________________________________________
+
     //Activity lifecycle
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        search = openOrCreateDatabase("search", MODE_PRIVATE, null);
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+        killed = sp.getBoolean("killed", true);
+        if (killed) {
+            clearData();
+        } else {
+            killed = true;
+        }
+
+        SQLiteDatabase search = openOrCreateDatabase("search", MODE_PRIVATE, null);
 
         if (ConnectionCheck.isConnected(this)) {
             LoadServerData loadServerData = new LoadServerData(search, this);
@@ -134,7 +155,6 @@ public class MainActivity extends AppCompatActivity {
         marginInPx = (int) (50 * scale + 0.5f);
 
         checkPermissions();
-        clearData();
 
         mediaPlayerUI = findViewById(R.id.bottom_sheet);
         mediaPlayerUI.setVisibility(View.GONE);
@@ -151,7 +171,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         readData();
-
         if (haveTrack) {
             mediaPlayerUI.setVisibility(View.VISIBLE);
             LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) mViewPagerControl.getLayoutParams();
@@ -171,23 +190,22 @@ public class MainActivity extends AppCompatActivity {
         unregisterReceiver(paused);
         unregisterReceiver(resume);
         unregisterReceiver(resetPlayerUI);
-        if (running) {
-            mHandler.removeCallbacks(mUpdateTimeTask);
-        }
-        unbindService(serviceConnection);
+        unregisterReceiver(seekUpdate);
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences.Editor editor = sp.edit();
+        editor.putBoolean("killed", false);
+        editor.apply();
         super.onDestroy();
     }
 
     @Override
     protected void onPause() {
         writeData();
-        if (running) {
-            mHandler.removeCallbacks(mUpdateTimeTask);
-        }
         super.onPause();
     }
 
     //Activity lifecycle End
+    //______________________________________________________________________________________________
 
     //Methods to load data on screen
 
@@ -201,6 +219,7 @@ public class MainActivity extends AppCompatActivity {
         registerPaused();
         registerResume();
         registerResetPlayerUI();
+        registerSeekUpdate();
 
         //Bottom Sheet Stuff
         pb = findViewById(R.id.play);
@@ -232,10 +251,6 @@ public class MainActivity extends AppCompatActivity {
 
         trackUrl = "";
 
-        serviceBound = false;
-
-        Intent intent = new Intent(this, MediaPlayerService.class);
-        bindService(intent, serviceConnection, Context.BIND_ABOVE_CLIENT);
 
         mViewPagerControl = findViewById(R.id.pager);
 
@@ -243,8 +258,6 @@ public class MainActivity extends AppCompatActivity {
         params.setMargins(0, 0, 0, 0);
         mViewPagerControl.setLayoutParams(params);
 
-
-        writeData();
     }
 
     private void setUpToolbar() {
@@ -362,8 +375,10 @@ public class MainActivity extends AppCompatActivity {
         mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-                if (serviceBound && b) {
-                    mediaPlayer.seek(i);
+                if (serviceRunning && b) {
+                    Intent intent = new Intent(ACTION_SEEK);
+                    intent.putExtra("pos", i);
+                    sendBroadcast(intent);
                 }
             }
 
@@ -384,7 +399,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 if (haveTrack) {
-                    mediaPlayer.previous();
+                    Intent intent = new Intent(ACTION_PREV);
+                    sendBroadcast(intent);
                 }
             }
         });
@@ -392,7 +408,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 if (haveTrack) {
-                    mediaPlayer.next();
+                    Intent intent = new Intent(ACTION_NEXT);
+                    sendBroadcast(intent);
                 }
             }
         });
@@ -481,7 +498,6 @@ public class MainActivity extends AppCompatActivity {
                         getSupportActionBar().setTitle(R.string.playerTitle);
                         mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.START);
                         mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.END);
-                        //playerToolbar.inflateMenu(R.menu.player_options_menu);
                         expanded = true;
                         findViewById(R.id.btmSheet).setVisibility(View.GONE);
                         break;
@@ -515,10 +531,10 @@ public class MainActivity extends AppCompatActivity {
                 sheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
             }
         });
-
     }
 
     //Methods to load data on screen End
+    //______________________________________________________________________________________________
 
 
 //Broadcast Receivers
@@ -526,8 +542,9 @@ public class MainActivity extends AppCompatActivity {
     private BroadcastReceiver playerPrepared = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            readData();
             duration = "";
-            int millis = mediaPlayer.getDuration();
+            int millis = intDuration;
             int seconds = (millis / 1000) % 60;
             long minutes = (millis / 1000 - seconds) / 60;
 
@@ -541,40 +558,23 @@ public class MainActivity extends AppCompatActivity {
             }
             duration += Integer.toString(seconds);
 
-            intDuration = mediaPlayer.getDuration();
-
-            playing = true;
-
-            isLoading = false;
-
             loadPlayer();
             writeData();
+
+            adapter.update("playing", playerPosition);
+            linearLayoutManager.scrollToPosition(playerPosition);
         }
     };
 
     private void registerPlayerPrepared() {
-        IntentFilter filter = new IntentFilter(MediaPlayerService.Broadcast_PLAYER_PREPARED);
+        IntentFilter filter = new IntentFilter(Broadcast_PLAYER_PREPARED);
         registerReceiver(playerPrepared, filter);
     }
 
     private BroadcastReceiver newAudio = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            trackTitle = intent.getExtras().getString("title");
-            trackSub = intent.getExtras().getString("sub");
-            trackImg = intent.getExtras().getString("img");
-            trackUrl = intent.getExtras().getString("url");
-            isFav = intent.getExtras().getBoolean("fav");
-            mediaQueue = intent.getExtras().getString("playlist");
-
-            isLoading = true;
-            haveTrack = true;
-
-            if (!serviceBound) {
-                Intent bound = new Intent(getApplicationContext(), MediaPlayerService.class);
-                bindService(bound, serviceConnection, Context.BIND_ABOVE_CLIENT);
-            }
-
+            readData();
             mediaPlayerUI.setVisibility(View.VISIBLE);
             LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) mViewPagerControl.getLayoutParams();
             params.setMargins(0, 0, 0, marginInPx);
@@ -582,11 +582,14 @@ public class MainActivity extends AppCompatActivity {
 
             loadPlayer();
             writeData();
+
+            adapter.update("loading", playerPosition);
+            linearLayoutManager.scrollToPosition(playerPosition);
         }
     };
 
     private void registerNewAudio() {
-        IntentFilter filter = new IntentFilter(MediaPlayerService.New_Audio);
+        IntentFilter filter = new IntentFilter(New_Audio);
         registerReceiver(newAudio, filter);
     }
 
@@ -602,7 +605,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private void registerBufferingUpdate() {
-        IntentFilter filter = new IntentFilter(MediaPlayerService.Buffering_Upadate);
+        IntentFilter filter = new IntentFilter(Buffering_Update);
         registerReceiver(bufferingUpdate, filter);
     }
 
@@ -615,7 +618,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private void registerBuffering() {
-        IntentFilter filter = new IntentFilter(MediaPlayerService.Buffering);
+        IntentFilter filter = new IntentFilter(MediaService.Buffering);
         registerReceiver(buffering, filter);
     }
 
@@ -628,7 +631,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private void registerBufferingEnd() {
-        IntentFilter filter = new IntentFilter(MediaPlayerService.buffering_End);
+        IntentFilter filter = new IntentFilter(buffering_End);
         registerReceiver(bufferingEnd, filter);
     }
 
@@ -641,7 +644,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private void registerPaused() {
-        IntentFilter filter = new IntentFilter(Action_Pause);
+        IntentFilter filter = new IntentFilter(ACTION_PAUSE);
         registerReceiver(paused, filter);
     }
 
@@ -654,7 +657,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private void registerResume() {
-        IntentFilter filter = new IntentFilter(Action_Play);
+        IntentFilter filter = new IntentFilter(ACTION_PLAY);
         registerReceiver(resume, filter);
     }
 
@@ -671,18 +674,14 @@ public class MainActivity extends AppCompatActivity {
             haveTrack = false;
             currentStringTime = "00:00";
             duration = "00:00";
-            serviceBound = false;
+
+            serviceRunning = false;
 
             writeData();
             loadPlayer();
 
             if (expanded) {
                 sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-            }
-
-            if (running) {
-                mHandler.removeCallbacks(mUpdateTimeTask);
-                mediaPlayer.stopSelf();
             }
 
             mediaPlayerUI.setVisibility(View.GONE);
@@ -693,44 +692,63 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private void registerResetPlayerUI() {
-        IntentFilter filter = new IntentFilter(Kill_Player);
+        IntentFilter filter = new IntentFilter(ACTION_STOP);
         registerReceiver(resetPlayerUI, filter);
     }
 
-
-    //Broadcast Receivers end
-
-
-    //Binding Service to the client
-
-    private ServiceConnection serviceConnection = new ServiceConnection() {
+    private BroadcastReceiver seekUpdate = new BroadcastReceiver() {
         @Override
-        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            //we're bound to local service cast the IBinder and get LocalService instance
-            MediaPlayerService.LocalBinder binder = (MediaPlayerService.LocalBinder) iBinder;
-            mediaPlayer = binder.getService();
-            serviceBound = true;
-        }
+        public void onReceive(Context context, Intent intent) {
+            if (haveTrack) {
+                int currentPos = intent.getExtras().getInt("currentPosition", 0);
 
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            serviceBound = false;
+                currentTime = currentPos;
+                int seconds = (currentPos / 1000) % 60;
+                long minutes = (currentPos / 1000 - seconds) / 60;
+
+                String cPos = "";
+
+                if (minutes < 10) {
+                    cPos += "0";
+                }
+                cPos += Long.toString(minutes);
+                cPos += ":";
+                if (seconds < 10) {
+                    cPos += "0";
+                }
+                cPos += Integer.toString(seconds);
+
+                cp.setText(cPos);
+                currentStringTime = cPos;
+
+                mSeekBar.setProgress(currentPos);
+                mProgressBar.setProgress(currentPos);
+            }
         }
     };
 
-    //binding service end
+    private void registerSeekUpdate() {
+        IntentFilter filter = new IntentFilter(SEEK_UPDATE);
+        registerReceiver(seekUpdate, filter);
+    }
+
+    //Broadcast Receivers end
+    //______________________________________________________________________________________________
+
 
     //Loading and controlling media player
 
     public void playPause(View view) {
-        if (serviceBound) {
+        if (serviceRunning) {
             if (playing) {
-                mediaPlayer.pauseMedia();
+                Intent intent = new Intent(ACTION_PAUSE);
+                sendBroadcast(intent);
                 pb.setImageResource(R.drawable.ic_play_arrow);
                 con.setImageResource(R.drawable.ic_play_arrow);
                 playing = false;
             } else {
-                mediaPlayer.resumeMedia();
+                Intent intent = new Intent(ACTION_PLAY);
+                sendBroadcast(intent);
                 pb.setImageResource(R.drawable.ic_pause);
                 con.setImageResource(R.drawable.ic_pause);
                 playing = true;
@@ -793,43 +811,6 @@ public class MainActivity extends AppCompatActivity {
                 repeat.setMinimumHeight(3);
             }
 
-            if (haveTrack) {
-
-                RelativeLayout relativeLayout = findViewById(R.id.loadingPlaylist);
-                relativeLayout.setVisibility(View.VISIBLE);
-
-                //Playlist
-                Type type = new TypeToken<List<ListItem>>() {
-                }.getType();
-                Gson gson = new Gson();
-                List<ListItem> mPlaylist = gson.fromJson(mediaQueue, type);
-
-                RecyclerView queue = findViewById(R.id.queue);
-                LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getApplicationContext(), LinearLayoutManager.VERTICAL, false);
-                queue.setLayoutManager(linearLayoutManager);
-
-                RecyclerView.Adapter adapter = new AlbumAdapter(getApplicationContext(), mPlaylist);
-                queue.setAdapter(adapter);
-
-                relativeLayout.setVisibility(View.GONE);
-
-
-                Glide.with(this)
-                        .asBitmap()
-                        .load(trackImg)
-                        .into(iv1);
-                Glide.with(this)
-                        .asBitmap()
-                        .load(trackImg)
-                        .into(iv2);
-                mProgressBar.setMax(intDuration);
-            } else {
-                iv1.setImageResource(R.drawable.player_background);
-                iv2.setImageResource(R.drawable.player_background);
-                mProgressBar.setMax(100);
-                mProgressBar.setProgress(100);
-            }
-
             mSeekBar.setMax(intDuration);
 
             loadingExp.setVisibility(View.GONE);
@@ -840,6 +821,28 @@ public class MainActivity extends AppCompatActivity {
 
             mSeekBar.setEnabled(true);
 
+            if (haveTrack) {
+
+                Glide.with(this)
+                        .asBitmap()
+                        .load(trackImg)
+                        .into(iv1);
+                Glide.with(this)
+                        .asBitmap()
+                        .load(trackImg)
+                        .into(iv2);
+                mProgressBar.setMax(intDuration);
+
+                mSeekBar.setProgress(currentTime);
+                mProgressBar.setProgress(currentTime);
+                cp.setText(currentStringTime);
+            } else {
+                iv1.setImageResource(R.drawable.player_background);
+                iv2.setImageResource(R.drawable.player_background);
+                mProgressBar.setMax(100);
+                mProgressBar.setProgress(100);
+            }
+
             if (playing) {
                 pb.setImageResource(R.drawable.ic_pause);
                 con.setImageResource(R.drawable.ic_pause);
@@ -847,49 +850,41 @@ public class MainActivity extends AppCompatActivity {
                 pb.setImageResource(R.drawable.ic_play_arrow);
                 con.setImageResource(R.drawable.ic_play_arrow);
             }
-
-            if (haveTrack) {
-                mSeekBar.setProgress(currentTime);
-                mProgressBar.setProgress(currentTime);
-                cp.setText(currentStringTime);
-                mHandler = new Handler();
-                mHandler.postDelayed(mUpdateTimeTask, 100);
-            }
         }
+
+
+        //Playlist
+        RelativeLayout relativeLayout = findViewById(R.id.loadingPlaylist);
+        relativeLayout.setVisibility(View.VISIBLE);
+
+        Type type = new TypeToken<List<ListItem>>() {
+        }.getType();
+        Gson gson = new Gson();
+        List<ListItem> mPlaylist = gson.fromJson(mediaQueue, type);
+
+        RecyclerView queue = findViewById(R.id.queue);
+        linearLayoutManager = new LinearLayoutManager(getApplicationContext(), LinearLayoutManager.VERTICAL, false);
+        queue.setLayoutManager(linearLayoutManager);
+
+        ItemTouchHelper.SimpleCallback itemTouchHelperCallback = new RemoveQueueItem(0, ItemTouchHelper.LEFT, this);
+        new ItemTouchHelper(itemTouchHelperCallback).attachToRecyclerView(queue);
+
+        adapter = new QueueAdapter(getApplicationContext(), mPlaylist);
+        queue.setAdapter(adapter);
+
+        if (isLoading) {
+            adapter.update("loading", playerPosition);
+            linearLayoutManager.scrollToPosition(playerPosition);
+        } else if (playing) {
+            adapter.update("playing", playerPosition);
+            linearLayoutManager.scrollToPosition(playerPosition);
+        }
+
+        relativeLayout.setVisibility(View.GONE);
     }
 
-    private Runnable mUpdateTimeTask = new Runnable() {
-        public void run() {
-            if (haveTrack) {
-                running = true;
-                int currentPos = mediaPlayer.getCurrentPosition();
-                currentTime = currentPos;
-                int seconds = (currentPos / 1000) % 60;
-                long minutes = (currentPos / 1000 - seconds) / 60;
-
-                String cPos = "";
-
-                if (minutes < 10) {
-                    cPos += "0";
-                }
-                cPos += Long.toString(minutes);
-                cPos += ":";
-                if (seconds < 10) {
-                    cPos += "0";
-                }
-                cPos += Integer.toString(seconds);
-
-                cp.setText(cPos);
-                currentStringTime = cPos;
-
-                mHandler.postDelayed(this, 100);
-                mSeekBar.setProgress(mediaPlayer.getCurrentPosition());
-                mProgressBar.setProgress(mediaPlayer.getCurrentPosition());
-            }
-        }
-    };
-
     //Loading and controlling media player Done
+    //______________________________________________________________________________________________
 
     //Data Related operations
 
@@ -898,6 +893,7 @@ public class MainActivity extends AppCompatActivity {
         trackTitle = preferences.getString("title", "");
         trackSub = preferences.getString("sub", "");
         trackImg = preferences.getString("img", "");
+        trackUrl = preferences.getString("url", "");
         isLoading = preferences.getBoolean("loading", false);
         playing = preferences.getBoolean("playing", false);
         haveTrack = preferences.getBoolean("haveTrack", false);
@@ -908,25 +904,8 @@ public class MainActivity extends AppCompatActivity {
         loopStatus = preferences.getInt("loop", 1);
         mediaQueue = preferences.getString("playlist", "");
         isFav = preferences.getBoolean("fav", false);
-    }
-
-    private void clearData() {
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putString("title", "Track Title");
-        editor.putString("sub", "Artist | Year");
-        editor.putString("img", "");
-        editor.putBoolean("loading", false);
-        editor.putBoolean("playing", false);
-        editor.putBoolean("haveTrack", false);
-        editor.putInt("currentTime", 0);
-        editor.putString("currentStringTime", "00:00");
-        editor.putInt("intDuration", 0);
-        editor.putString("duration", "00:00");
-        editor.putBoolean("fav", false);
-        editor.putString("playlist", "");
-
-        editor.apply();
+        serviceRunning = preferences.getBoolean("serviceRunning", false);
+        playerPosition = preferences.getInt("playerPosition", -1);
     }
 
     private void writeData() {
@@ -945,11 +924,33 @@ public class MainActivity extends AppCompatActivity {
         editor.putInt("loop", loopStatus);
         editor.putBoolean("fav", isFav);
         editor.putString("playlist", mediaQueue);
-        editor.putBoolean("bound", serviceBound);
+        editor.putBoolean("serviceRunning", serviceRunning);
+        editor.apply();
+    }
+
+    private void clearData() {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString("title", "Track Title");
+        editor.putString("sub", "Artist | Year");
+        editor.putString("img", "");
+        editor.putBoolean("loading", false);
+        editor.putBoolean("playing", false);
+        editor.putBoolean("haveTrack", false);
+        editor.putInt("currentTime", 0);
+        editor.putString("currentStringTime", "00:00");
+        editor.putInt("intDuration", 0);
+        editor.putString("duration", "00:00");
+        editor.putBoolean("fav", false);
+        editor.putString("playlist", "");
+        editor.putBoolean("serviceRunning", false);
+
         editor.apply();
     }
 
     //Data Related operations Done
+    //______________________________________________________________________________________________
+
     @Override
     public void onBackPressed() {
 
@@ -959,15 +960,6 @@ public class MainActivity extends AppCompatActivity {
             sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
         } else {
             if (doubleBackToExitPressedOnce) {
-                clearData();
-                haveTrack = false;
-                if (serviceBound) {
-                    mediaPlayer.stopMedia();
-                    mediaPlayer.stopSelf();
-                }
-                if (running) {
-                    //mHandler.removeCallbacks(mUpdateTaskTime);
-                }
                 super.onBackPressed();
                 return;
             }
@@ -1022,6 +1014,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    //______________________________________________________________________________________________
+
     //Check for permission
     private void checkPermissions() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
@@ -1067,6 +1061,15 @@ public class MainActivity extends AppCompatActivity {
                 }
                 break;
             default:
+        }
+    }
+
+    @Override
+    public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction, int position) {
+        if (viewHolder instanceof QueueAdapter.ViewHolder) {
+            if (viewHolder.getAdapterPosition() != playerPosition) {
+                adapter.removeItem(viewHolder.getAdapterPosition());
+            }
         }
     }
 

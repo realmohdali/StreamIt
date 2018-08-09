@@ -1,4 +1,4 @@
-package it.stream.streamit;
+package it.stream.streamit.database;
 
 import android.content.Context;
 import android.content.SharedPreferences;

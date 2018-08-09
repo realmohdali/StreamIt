@@ -1,4 +1,4 @@
-package it.stream.streamit;
+package it.stream.streamit.adapters;
 
 import android.content.Context;
 import android.support.v4.app.Fragment;
@@ -6,6 +6,9 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
 
 import java.util.List;
+
+import it.stream.streamit.tabFragments.Album_Tab_Fragment;
+import it.stream.streamit.dataList.ArtistInYearList;
 
 public class YearPagerAdapter extends FragmentStatePagerAdapter {
 
@@ -26,7 +29,7 @@ public class YearPagerAdapter extends FragmentStatePagerAdapter {
 
     @Override
     public Fragment getItem(int i) {
-        tab=new Album_Tab_Fragment();
+        tab = new Album_Tab_Fragment();
         tab.setArtist(mList.get(i).getArtist());
         tab.setYear(year);
         tab.setContext(context);

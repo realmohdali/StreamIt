@@ -1,11 +1,8 @@
-package it.stream.streamit;
+package it.stream.streamit.adapters;
 
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
@@ -18,55 +15,44 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
-import com.google.gson.Gson;
 
 import java.util.List;
 
+import it.stream.streamit.database.ConnectionCheck;
+import it.stream.streamit.dataList.ListItem;
+import it.stream.streamit.R;
+import it.stream.streamit.backgroundService.MediaService;
 import jp.wasabeef.glide.transformations.RoundedCornersTransformation;
 
 import static com.bumptech.glide.request.RequestOptions.bitmapTransform;
 
-class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> {
+public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> {
 
     public static final String Broadcast_PLAY_NEW_AUDIO = "it.stream.streamit.PlayNewAudio";
     private Context mContext;
     private List<ListItem> mList;
 
-    private MediaPlayerService mediaPlayer;
-    private boolean serviceBound = false;
+    private String title, url, sub, img, artist, year;
+
 
     public AlbumAdapter(Context mContext, List<ListItem> mList) {
         this.mContext = mContext;
         this.mList = mList;
     }
 
-    ServiceConnection serviceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            MediaPlayerService.LocalBinder binder = (MediaPlayerService.LocalBinder) iBinder;
-            mediaPlayer = binder.getService();
-            serviceBound = true;
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-
-        }
-    };
 
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
         View v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.album_list_view_item, viewGroup, false);
-        ViewHolder viewHolder = new ViewHolder(v);
-        return viewHolder;
+        return new ViewHolder(v);
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder viewHolder, final int i) {
 
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
-        serviceBound = sp.getBoolean("bound", false);
+        final boolean serviceRunning = sp.getBoolean("serviceRunning", false);
 
 
         viewHolder.a.setText(mList.get(i).getArtist());
@@ -83,37 +69,25 @@ class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> {
             @Override
             public void onClick(View view) {
                 if (ConnectionCheck.isConnected(mContext)) {
-                    final String url = mList.get(i).getURL();
-                    String title = mList.get(i).getTitle();
-                    String sub = mList.get(i).getArtist();
+
+                    url = mList.get(i).getURL();
+                    title = mList.get(i).getTitle();
+                    sub = mList.get(i).getArtist();
                     sub += " | ";
                     sub += mList.get(i).getYear();
-                    String img = mList.get(i).getImageUrl();
+                    img = mList.get(i).getImageUrl();
+                    year = mList.get(i).getYear();
+                    artist = mList.get(i).getArtist();
 
-                    Gson gson = new Gson();
-                    String json = gson.toJson(mList);
-                    int size = mList.size();
+                    writeData();
 
-                    if (!serviceBound) {
-                        Intent intent = new Intent(mContext, MediaPlayerService.class);
-                        intent.putExtra("media", url);
-                        intent.putExtra("title", title);
-                        intent.putExtra("sub", sub);
-                        intent.putExtra("img", img);
-                        intent.putExtra("playlist", json);
-                        intent.putExtra("size", size);
-                        intent.putExtra("position", i);
+                    if (!serviceRunning) {
+                        Intent intent = new Intent(mContext, MediaService.class);
+                        intent.putExtra("isPlayList", false);
                         mContext.startService(intent);
-                        mContext.bindService(intent, serviceConnection, Context.BIND_ABOVE_CLIENT);
                     } else {
                         Intent intent = new Intent(Broadcast_PLAY_NEW_AUDIO);
-                        intent.putExtra("media", url);
-                        intent.putExtra("title", title);
-                        intent.putExtra("sub", sub);
-                        intent.putExtra("img", img);
-                        intent.putExtra("playlist", json);
-                        intent.putExtra("size", size);
-                        intent.putExtra("position", i);
+                        intent.putExtra("isPlayList", false);
                         mContext.sendBroadcast(intent);
                     }
                 } else {
@@ -151,5 +125,17 @@ class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> {
             item = itemView.findViewById(R.id.albumItemView);
 
         }
+    }
+
+    private void writeData() {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(mContext);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString("title", title);
+        editor.putString("sub", sub);
+        editor.putString("img", img);
+        editor.putString("artist", artist);
+        editor.putString("year", year);
+        editor.putString("media", url);
+        editor.apply();
     }
 }

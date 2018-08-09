@@ -1,4 +1,4 @@
-package it.stream.streamit;
+package it.stream.streamit.dataList;
 
 public class YearList {
     private String year;
@@ -12,7 +12,7 @@ public class YearList {
         return imageUrl;
     }
 
-    YearList(String year, String imageUrl) {
+    public YearList(String year, String imageUrl) {
 
         this.year = year;
         this.imageUrl = imageUrl;

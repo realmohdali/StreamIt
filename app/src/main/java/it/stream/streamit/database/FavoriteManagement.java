@@ -1,4 +1,4 @@
-package it.stream.streamit;
+package it.stream.streamit.database;
 
 import android.content.Context;
 import android.content.Intent;
@@ -9,6 +9,8 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import it.stream.streamit.dataList.ListItem;
 
 public class FavoriteManagement {
     private String title, url, image, subtitle;

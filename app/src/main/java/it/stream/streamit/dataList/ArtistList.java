@@ -1,4 +1,4 @@
-package it.stream.streamit;
+package it.stream.streamit.dataList;
 
 public class ArtistList {
     String artist, imageUrl;
