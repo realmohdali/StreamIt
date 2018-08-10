@@ -30,6 +30,8 @@
     <string name="notification_channel_description">Labbaik Ya Hussain</string>
 
     <string name="stop">Stop</string>
+    <string name="next">Next</string>
+    <string name="prev">Prev</string>
 
     <string name="remove">Remove</string>
     <string name="play_all">Play All</string>

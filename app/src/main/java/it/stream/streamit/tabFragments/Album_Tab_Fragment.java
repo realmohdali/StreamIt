@@ -3,6 +3,7 @@ package it.stream.streamit.tabFragments;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
@@ -91,56 +92,7 @@ public class Album_Tab_Fragment extends Fragment {
         mRecyclerView.setVisibility(View.GONE);
         playAll.setVisibility(View.GONE);
         mRelativeLayout.setVisibility(View.VISIBLE);
-
-        StringRequest stringRequest = new StringRequest(Request.Method.POST,
-                URL,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        try {
-                            mRelativeLayout.setVisibility(View.GONE);
-                            mRecyclerView.setVisibility(View.VISIBLE);
-                            playAll.setVisibility(View.VISIBLE);
-                            JSONArray jsonArray = new JSONArray(response);
-
-                            for (int i = 0; i < jsonArray.length(); i++) {
-                                JSONObject jsonObject = jsonArray.getJSONObject(i);
-
-                                String image = "http://realmohdali.000webhostapp.com/streamIt/";
-                                image += jsonObject.getString("image");
-                                String link = jsonObject.getString("url");
-                                String title = jsonObject.getString("title");
-
-                                ListItem li = new ListItem(title, artist, image, link, year);
-                                mList.add(li);
-                            }
-
-                            mAdapter = new AlbumAdapter(context, mList);
-                            mRecyclerView.setAdapter(mAdapter);
-
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-
-                    }
-                }) {
-            @Override
-            protected Map<String, String> getParams() {
-                Map<String, String> params = new HashMap<>();
-                params.put("y", year);
-                params.put("a", artist);
-                return params;
-            }
-        };
-
-        stringRequest.setShouldCache(false);
-        RequestQueue requestQueue = Volley.newRequestQueue(context);
-        requestQueue.add(stringRequest);
+        new getAlbum().execute();
     }
 
     private void playAll() {
@@ -189,5 +141,64 @@ public class Album_Tab_Fragment extends Fragment {
         editor.putString("year", year);
         editor.putString("media", url);
         editor.apply();
+    }
+
+    private class getAlbum extends AsyncTask<Void, Void, Void> {
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+
+            StringRequest stringRequest = new StringRequest(Request.Method.POST,
+                    URL,
+                    new Response.Listener<String>() {
+                        @Override
+                        public void onResponse(String response) {
+                            try {
+                                mRelativeLayout.setVisibility(View.GONE);
+                                mRecyclerView.setVisibility(View.VISIBLE);
+                                playAll.setVisibility(View.VISIBLE);
+                                JSONArray jsonArray = new JSONArray(response);
+
+                                for (int i = 0; i < jsonArray.length(); i++) {
+                                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+
+                                    String image = "http://realmohdali.000webhostapp.com/streamIt/";
+                                    image += jsonObject.getString("image");
+                                    String link = jsonObject.getString("url");
+                                    String title = jsonObject.getString("title");
+
+                                    ListItem li = new ListItem(title, artist, image, link, year);
+                                    mList.add(li);
+                                }
+
+                                mAdapter = new AlbumAdapter(context, mList);
+                                mRecyclerView.setAdapter(mAdapter);
+
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    },
+                    new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+
+                        }
+                    }) {
+                @Override
+                protected Map<String, String> getParams() {
+                    Map<String, String> params = new HashMap<>();
+                    params.put("y", year);
+                    params.put("a", artist);
+                    return params;
+                }
+            };
+
+            stringRequest.setShouldCache(false);
+            RequestQueue requestQueue = Volley.newRequestQueue(context);
+            requestQueue.add(stringRequest);
+
+            return null;
+        }
     }
 }

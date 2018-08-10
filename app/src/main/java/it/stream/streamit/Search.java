@@ -707,8 +707,8 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
                 sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
             }
 
-            mediaPlayerUI.setVisibility(View.VISIBLE);
-            mRecyclerView.setPadding(0, 0, 0, marginInPx);
+            mediaPlayerUI.setVisibility(View.GONE);
+            mRecyclerView.setPadding(0, 0, 0, 0);
             addPadding = true;
         }
     };

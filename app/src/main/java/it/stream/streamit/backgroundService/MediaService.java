@@ -435,6 +435,12 @@ public class MediaService extends Service
         Intent stopIntent = new Intent(ACTION_STOP);
         PendingIntent stopPendingIntent = PendingIntent.getBroadcast(this,
                 0, stopIntent, 0);
+        Intent nextIntent = new Intent(ACTION_NEXT);
+        PendingIntent nextPendingIntent = PendingIntent.getBroadcast(this,
+                0, nextIntent, 0);
+        Intent prevIntent = new Intent(ACTION_PREV);
+        PendingIntent prevPendingIntent = PendingIntent.getBroadcast(this,
+                0, prevIntent, 0);
 
         NotificationCompat.Builder mBuilder = null;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
@@ -449,7 +455,9 @@ public class MediaService extends Service
                     .setPriority(Notification.PRIORITY_MAX)
                     .setOngoing(Flag_Sticky)
                     .setContentIntent(resumePendingIntent)
-                    .addAction(R.drawable.ic_stop, getString(R.string.stop), stopPendingIntent);
+                    .addAction(R.drawable.ic_stop, getString(R.string.stop), stopPendingIntent)
+                    .addAction(R.drawable.ic_skip_previous_white_24dp, getString(R.string.prev), prevPendingIntent)
+                    .addAction(R.drawable.ic_skip_next_white_24dp, getString(R.string.next), nextPendingIntent);
         }
 
         assert mBuilder != null;

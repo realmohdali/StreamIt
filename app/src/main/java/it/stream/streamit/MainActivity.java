@@ -14,6 +14,7 @@ import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomSheetBehavior;
+import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
@@ -66,6 +67,7 @@ import static it.stream.streamit.backgroundService.MediaService.Broadcast_PLAYER
 import static it.stream.streamit.backgroundService.MediaService.Buffering_Update;
 import static it.stream.streamit.backgroundService.MediaService.New_Audio;
 import static it.stream.streamit.backgroundService.MediaService.buffering_End;
+import static it.stream.streamit.database.LoadServerData.DATA_LOADED;
 
 public class MainActivity extends AppCompatActivity implements RemoveQueueItem.SwipeToRemoveListener {
 
@@ -191,6 +193,7 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         unregisterReceiver(resume);
         unregisterReceiver(resetPlayerUI);
         unregisterReceiver(seekUpdate);
+        unregisterReceiver(searchDataLoaded);
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor editor = sp.edit();
         editor.putBoolean("killed", false);
@@ -220,6 +223,7 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         registerResume();
         registerResetPlayerUI();
         registerSeekUpdate();
+        registerSearchDataLoaded();
 
         //Bottom Sheet Stuff
         pb = findViewById(R.id.play);
@@ -730,6 +734,21 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
     private void registerSeekUpdate() {
         IntentFilter filter = new IntentFilter(SEEK_UPDATE);
         registerReceiver(seekUpdate, filter);
+    }
+
+    private BroadcastReceiver searchDataLoaded = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            RelativeLayout loadScreen = findViewById(R.id.loadingScreen);
+            CoordinatorLayout mainContent = findViewById(R.id.mainContent);
+            loadScreen.setVisibility(View.GONE);
+            mainContent.setVisibility(View.VISIBLE);
+        }
+    };
+
+    private void registerSearchDataLoaded() {
+        IntentFilter filter = new IntentFilter(DATA_LOADED);
+        registerReceiver(searchDataLoaded, filter);
     }
 
     //Broadcast Receivers end
