@@ -2,7 +2,6 @@ package it.stream.streamit.adapters;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
@@ -16,7 +15,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
-import com.google.gson.Gson;
 
 import java.util.List;
 
@@ -31,10 +29,9 @@ import static it.stream.streamit.backgroundService.MediaPlayerControllerConstant
 
 public class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.ViewHolder> {
 
-    public static final String Broadcast_PLAY_NEW_AUDIO = "it.stream.streamit.PlayNewAudio";
+    private static final String Broadcast_PLAY_NEW_AUDIO = "it.stream.streamit.PlayNewAudio";
     private Context mContext;
     private List<ListItem> mList;
-    private int len;
     private String status;
     private int change;
 
@@ -43,9 +40,8 @@ public class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.ViewHolder> 
     public QueueAdapter(Context mContext, List<ListItem> mList) {
         this.mContext = mContext;
         this.mList = mList;
-        len = mList.size();
         status = "normal";
-        change = -1;
+        change = 0;
     }
 
     @NonNull
@@ -56,11 +52,11 @@ public class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.ViewHolder> 
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder viewHolder, final int i) {
+    public void onBindViewHolder(@NonNull final ViewHolder viewHolder, int i) {
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
         final boolean serviceRunning = sp.getBoolean("serviceRunning", false);
 
-        if (change == i) {
+        if (change == viewHolder.getAdapterPosition()) {
             switch (status) {
                 case "normal":
                     viewHolder.loading.setVisibility(View.GONE);
@@ -75,6 +71,9 @@ public class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.ViewHolder> 
                     viewHolder.playing.setVisibility(View.VISIBLE);
                     break;
             }
+        } else {
+            viewHolder.loading.setVisibility(View.GONE);
+            viewHolder.playing.setVisibility(View.GONE);
         }
 
         viewHolder.a.setText(mList.get(i).getArtist());
@@ -94,11 +93,13 @@ public class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.ViewHolder> 
         Glide.with(mContext)
                 .asBitmap()
                 .load(mList.get(i).getImageUrl())
+                .apply(bitmapTransform(new RoundedCornersTransformation(5, 0, RoundedCornersTransformation.CornerType.ALL)))
                 .into(viewHolder.ivPlaying);
 
         viewHolder.foreground.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                final int i = viewHolder.getAdapterPosition();
                 if (ConnectionCheck.isConnected(mContext)) {
                     url = mList.get(i).getURL();
                     title = mList.get(i).getTitle();
@@ -129,7 +130,7 @@ public class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.ViewHolder> 
 
     @Override
     public int getItemCount() {
-        return len;
+        return mList.size();
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
@@ -158,14 +159,13 @@ public class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.ViewHolder> 
         Intent intent = new Intent(REMOVE_ITEM);
         intent.putExtra("i", i);
         mContext.sendBroadcast(intent);
-        len = mList.size();
         notifyItemRemoved(i);
     }
 
-    public void update(String state, int i) {
+    public void update(String state, int pos) {
         status = state;
-        change = i;
-        notifyItemChanged(i);
+        change = pos;
+        notifyItemChanged(pos);
     }
 
     private void writeData() {

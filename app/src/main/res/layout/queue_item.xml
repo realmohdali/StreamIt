@@ -40,7 +40,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/colorBlack"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:padding="6dp">
 
         <ImageView
             android:id="@+id/image"
@@ -91,6 +92,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
+        android:padding="6dp"
         android:visibility="gone">
 
         <ProgressBar
@@ -105,6 +107,7 @@
         android:layout_height="wrap_content"
         android:background="@color/colorGreen"
         android:orientation="horizontal"
+        android:padding="6dp"
         android:visibility="gone">
 
         <ImageView

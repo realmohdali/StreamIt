@@ -666,8 +666,8 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
                 sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
             }
 
-            mediaPlayerUI.setVisibility(View.VISIBLE);
-            mRecyclerView.setPadding(0, 0, 0, marginInPx);
+            mediaPlayerUI.setVisibility(View.GONE);
+            mRecyclerView.setPadding(0, 0, 0, 0);
         }
     };
 
@@ -849,7 +849,7 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
         new ItemTouchHelper(itemTouchHelperCallback).attachToRecyclerView(queue);
 
         qAdapter = new QueueAdapter(getApplicationContext(), mPlaylist);
-        queue.setAdapter(adapter);
+        queue.setAdapter(qAdapter);
 
         if (isLoading) {
             qAdapter.update("loading", playerPosition);
