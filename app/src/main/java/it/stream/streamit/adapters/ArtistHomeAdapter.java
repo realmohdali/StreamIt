@@ -6,10 +6,12 @@ import android.content.Intent;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
+import android.text.method.ScrollingMovementMethod;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -40,7 +42,7 @@ public class ArtistHomeAdapter extends RecyclerView.Adapter<ArtistHomeAdapter.Vi
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
-        View v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.list_item, viewGroup, false);
+        View v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.artist_list_item, viewGroup, false);
         ViewHolder mViewHolder = new ViewHolder(v);
         return mViewHolder;
     }
@@ -48,13 +50,15 @@ public class ArtistHomeAdapter extends RecyclerView.Adapter<ArtistHomeAdapter.Vi
     @Override
     public void onBindViewHolder(@NonNull final ViewHolder viewHolder, final int i) {
         viewHolder.t.setText(mArtistList.get(i).getArtist());
+        viewHolder.nat.setText(mArtistList.get(i).getNationality());
+        viewHolder.year.setText(mArtistList.get(i).getYears());
         Glide.with(mContext)
                 .asBitmap()
                 .load(mArtistList.get(i).getImageUrl())
                 .apply(bitmapTransform(new RoundedCornersTransformation(5, 0, RoundedCornersTransformation.CornerType.ALL)))
                 .into(viewHolder.iv);
         final String image = mArtistList.get(i).getImageUrl();
-        viewHolder.cv.setOnClickListener(new View.OnClickListener() {
+        viewHolder.item.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if (ConnectionCheck.isConnected(mContext)) {
@@ -76,15 +80,18 @@ public class ArtistHomeAdapter extends RecyclerView.Adapter<ArtistHomeAdapter.Vi
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        TextView t;
+        TextView t, nat, year;
         ImageView iv;
-        CardView cv;
+        LinearLayout item;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             t = itemView.findViewById(R.id.title);
             iv = itemView.findViewById(R.id.image);
-            cv = itemView.findViewById(R.id.cardView);
+            item = itemView.findViewById(R.id.item);
+            nat = itemView.findViewById(R.id.nationality);
+            year = itemView.findViewById(R.id.years);
+            t.setSelected(true);
         }
     }
 }

@@ -2,18 +2,20 @@ package it.stream.streamit.tabFragments;
 
 import android.app.Activity;
 import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
-import android.support.v7.widget.GridLayoutManager;
+import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
-import android.widget.TextView;
+import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -21,6 +23,7 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.bumptech.glide.ListPreloader;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -30,23 +33,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 import it.stream.streamit.R;
+import it.stream.streamit.adapters.AlbumAdapter;
 import it.stream.streamit.adapters.ArtistHomeAdapter;
-import it.stream.streamit.adapters.RecentHomeAdapter;
 import it.stream.streamit.adapters.YearHomeAdapter;
 import it.stream.streamit.dataList.ArtistList;
 import it.stream.streamit.dataList.ListItem;
 import it.stream.streamit.dataList.YearList;
+import it.stream.streamit.database.RecentManagement;
 
 public class Home_Tab_Fragment extends Fragment {
 
     private int position;
     private Activity mActivity;
-    private TextView textView;
     private Context context;
     private RecyclerView mRecyclerView;
     private RecyclerView.Adapter mAdapter;
+    private SQLiteDatabase database;
+    private SwipeRefreshLayout refreshLayout;
 
     private RelativeLayout mRelativeLayout;
+    private RelativeLayout noRecent;
 
     private List<ListItem> mListItems;
     private List<ArtistList> mArtistList;
@@ -69,25 +75,49 @@ public class Home_Tab_Fragment extends Fragment {
         this.context = context;
     }
 
+    public void setDatabase(SQLiteDatabase database) {
+        this.database = database;
+    }
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.home_tab_layout, container, false);
         mRelativeLayout = view.findViewById(R.id.loadingDataHome);
+        noRecent = view.findViewById(R.id.noRecent);
         mRecyclerView = view.findViewById(R.id.homeRecyclerView);
-        mRecyclerView.setLayoutManager(new GridLayoutManager(context, 2));
+        refreshLayout = view.findViewById(R.id.swipeToRefresh);
+        mRecyclerView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
         mListItems = new ArrayList<>();
         mArtistList = new ArrayList<>();
         mYearList = new ArrayList<>();
         switch (position) {
             case 0:
                 loadNew();
+                refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+                    @Override
+                    public void onRefresh() {
+                        loadNew();
+                    }
+                });
                 break;
             case 1:
                 loadArtist();
+                refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+                    @Override
+                    public void onRefresh() {
+                        loadArtist();
+                    }
+                });
                 break;
             case 2:
                 loadYear();
+                refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+                    @Override
+                    public void onRefresh() {
+                        loadYear();
+                    }
+                });
                 break;
         }
         return view;
@@ -97,166 +127,111 @@ public class Home_Tab_Fragment extends Fragment {
     private void loadNew() {
         mRecyclerView.setVisibility(View.GONE);
         mRelativeLayout.setVisibility(View.VISIBLE);
-        new getNew().execute();
+        RecentManagement showRecent = new RecentManagement(database);
+        mListItems = showRecent.showRecent();
+        if (mListItems != null && mListItems.size() > 0) {
+            noRecent.setVisibility(View.GONE);
+        } else {
+            noRecent.setVisibility(View.VISIBLE);
+        }
+        mRelativeLayout.setVisibility(View.GONE);
+        mRecyclerView.setVisibility(View.VISIBLE);
+        mAdapter = new AlbumAdapter(context, mListItems);
+        mRecyclerView.setAdapter(mAdapter);
+        refreshLayout.setRefreshing(false);
     }
 
     private void loadArtist() {
+        noRecent.setVisibility(View.GONE);
         mRecyclerView.setVisibility(View.GONE);
         mRelativeLayout.setVisibility(View.VISIBLE);
-        new getArtist().execute();
+
+        StringRequest mStringRequest = new StringRequest(Request.Method.GET,
+                URL2,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        try {
+                            mRelativeLayout.setVisibility(View.GONE);
+                            mRecyclerView.setVisibility(View.VISIBLE);
+                            JSONArray jsonArray = new JSONArray(response);
+
+                            for (int i = 0; i < jsonArray.length(); i++) {
+                                JSONObject jsonObject = jsonArray.getJSONObject(i);
+
+                                String image = "http://realmohdali.000webhostapp.com/streamIt/";
+                                image += jsonObject.getString("image");
+                                String artist = jsonObject.getString("artist");
+                                String nationality = jsonObject.getString("nationality");
+                                String years = jsonObject.getString("years");
+
+                                ArtistList li = new ArtistList(artist, image, nationality, years);
+                                mArtistList.add(li);
+                            }
+                            mAdapter = new ArtistHomeAdapter(mArtistList, context, mActivity);
+                            mRecyclerView.setAdapter(mAdapter);
+                            refreshLayout.setRefreshing(false);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+
+                    }
+                });
+        mStringRequest.setShouldCache(false);
+        RequestQueue mRequest = Volley.newRequestQueue(context);
+        mRequest.add(mStringRequest);
+
     }
 
     private void loadYear() {
+        noRecent.setVisibility(View.GONE);
         mRecyclerView.setVisibility(View.GONE);
         mRelativeLayout.setVisibility(View.VISIBLE);
-        new getYear().execute();
-    }
 
-    private class getNew extends AsyncTask<Void, Void, Void> {
+        StringRequest mStringRequest = new StringRequest(Request.Method.GET,
+                URL3,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        try {
+                            mRelativeLayout.setVisibility(View.GONE);
+                            mRecyclerView.setVisibility(View.VISIBLE);
+                            JSONArray jsonArray = new JSONArray(response);
 
-        @Override
-        protected Void doInBackground(Void... voids) {
+                            for (int i = 0; i < jsonArray.length(); i++) {
+                                JSONObject jsonObject = jsonArray.getJSONObject(i);
 
-            StringRequest mStringRequest = new StringRequest(Request.Method.GET,
-                    URL1,
-                    new Response.Listener<String>() {
-                        @Override
-                        public void onResponse(String response) {
-                            try {
-                                mRelativeLayout.setVisibility(View.GONE);
-                                mRecyclerView.setVisibility(View.VISIBLE);
-                                JSONArray mJsonArray = new JSONArray(response);
+                                String year = jsonObject.getString("year");
+                                String image = "http://realmohdali.000webhostapp.com/streamIt/";
+                                image += jsonObject.getString("image");
 
-                                for (int i = 0; i < mJsonArray.length(); i++) {
-                                    JSONObject mJsonObject = mJsonArray.getJSONObject(i);
-
-                                    String title = mJsonObject.getString("title");
-                                    String artist = mJsonObject.getString("artist");
-                                    String year = mJsonObject.getString("year");
-                                    String link = mJsonObject.getString("url");
-                                    String image = "http://realmohdali.000webhostapp.com/streamIt/";
-                                    image += mJsonObject.getString("image");
-
-                                    ListItem li = new ListItem(title, artist, image, link, year);
-                                    mListItems.add(li);
-                                }
-
-                                mAdapter = new RecentHomeAdapter(mListItems, context);
-                                mRecyclerView.setAdapter(mAdapter);
-
-                            } catch (JSONException e) {
-                                e.printStackTrace();
+                                YearList li = new YearList(year, image);
+                                mYearList.add(li);
                             }
 
-                        }
-                    },
-                    new Response.ErrorListener() {
-                        @Override
-                        public void onErrorResponse(VolleyError error) {
+                            mAdapter = new YearHomeAdapter(context, mYearList, mActivity);
+                            mRecyclerView.setAdapter(mAdapter);
+                            refreshLayout.setRefreshing(false);
 
+                        } catch (JSONException e) {
+                            e.printStackTrace();
                         }
-                    });
-            mStringRequest.setShouldCache(false);
-            RequestQueue mRequest = Volley.newRequestQueue(context);
-            mRequest.add(mStringRequest);
 
-            return null;
-        }
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                    }
+                });
+        mStringRequest.setShouldCache(false);
+        RequestQueue mRequest = Volley.newRequestQueue(context);
+        mRequest.add(mStringRequest);
     }
-
-    private class getArtist extends AsyncTask<Void, Void, Void> {
-
-        @Override
-        protected Void doInBackground(Void... voids) {
-
-            StringRequest mStringRequest = new StringRequest(Request.Method.GET,
-                    URL2,
-                    new Response.Listener<String>() {
-                        @Override
-                        public void onResponse(String response) {
-                            try {
-                                mRelativeLayout.setVisibility(View.GONE);
-                                mRecyclerView.setVisibility(View.VISIBLE);
-                                JSONArray jsonArray = new JSONArray(response);
-
-                                for (int i = 0; i < jsonArray.length(); i++) {
-                                    JSONObject jsonObject = jsonArray.getJSONObject(i);
-
-                                    String image = "http://realmohdali.000webhostapp.com/streamIt/";
-                                    image += jsonObject.getString("image");
-                                    String artist = jsonObject.getString("artist");
-
-                                    ArtistList li = new ArtistList(artist, image);
-                                    mArtistList.add(li);
-                                }
-                                mAdapter = new ArtistHomeAdapter(mArtistList, context, mActivity);
-                                mRecyclerView.setAdapter(mAdapter);
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-
-                        }
-                    },
-                    new Response.ErrorListener() {
-                        @Override
-                        public void onErrorResponse(VolleyError error) {
-
-                        }
-                    });
-            mStringRequest.setShouldCache(false);
-            RequestQueue mRequest = Volley.newRequestQueue(context);
-            mRequest.add(mStringRequest);
-
-            return null;
-        }
-    }
-
-    private class getYear extends AsyncTask<Void, Void, Void> {
-
-        @Override
-        protected Void doInBackground(Void... voids) {
-
-            StringRequest mStringRequest = new StringRequest(Request.Method.GET,
-                    URL3,
-                    new Response.Listener<String>() {
-                        @Override
-                        public void onResponse(String response) {
-                            try {
-                                mRelativeLayout.setVisibility(View.GONE);
-                                mRecyclerView.setVisibility(View.VISIBLE);
-                                JSONArray jsonArray = new JSONArray(response);
-
-                                for (int i = 0; i < jsonArray.length(); i++) {
-                                    JSONObject jsonObject = jsonArray.getJSONObject(i);
-
-                                    String year = jsonObject.getString("year");
-                                    String image = "http://realmohdali.000webhostapp.com/streamIt/";
-                                    image += jsonObject.getString("image");
-
-                                    YearList li = new YearList(year, image);
-                                    mYearList.add(li);
-                                }
-
-                                mAdapter = new YearHomeAdapter(context, mYearList, mActivity);
-                                mRecyclerView.setAdapter(mAdapter);
-
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-
-                        }
-                    },
-                    new Response.ErrorListener() {
-                        @Override
-                        public void onErrorResponse(VolleyError error) {
-                        }
-                    });
-            mStringRequest.setShouldCache(false);
-            RequestQueue mRequest = Volley.newRequestQueue(context);
-            mRequest.add(mStringRequest);
-
-            return null;
-        }
-    }
-
 }

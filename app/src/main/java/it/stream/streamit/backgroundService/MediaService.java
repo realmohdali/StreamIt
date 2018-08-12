@@ -45,6 +45,7 @@ import it.stream.streamit.database.FavoriteManagement;
 import it.stream.streamit.dataList.ListItem;
 import it.stream.streamit.MainActivity;
 import it.stream.streamit.R;
+import it.stream.streamit.database.RecentManagement;
 
 import static android.media.AudioManager.*;
 import static it.stream.streamit.adapters.RecentHomeAdapter.Broadcast_PLAY_NEW_AUDIO;
@@ -99,7 +100,7 @@ public class MediaService extends Service
     public static final String Buffering = "it.stream.streamit.Buffering";
     public static final String buffering_End = "it.stream.streamit.bufferingEnd";
 
-    private SQLiteDatabase db;
+    private SQLiteDatabase db, recent;
 
     //parse playlist
     private String json = "";
@@ -120,6 +121,7 @@ public class MediaService extends Service
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         db = openOrCreateDatabase("favorite", MODE_PRIVATE, null);
+        recent = openOrCreateDatabase("recent", MODE_PRIVATE, null);
         mPlaylist = new ArrayList<>();
         try {
             readData();
@@ -131,9 +133,13 @@ public class MediaService extends Service
                 Gson gson = new Gson();
                 mPlaylist = gson.fromJson(json, type);
                 playlistPosition = intent.getExtras().getInt("pos");
+                RecentManagement addToRecent = new RecentManagement(recent);
+                addToRecent.add(mPlaylist.get(0));
             } else {
                 ListItem li = new ListItem(title, artist, img, mediaFile, year);
                 mPlaylist.add(li);
+                RecentManagement addToRecent = new RecentManagement(recent);
+                addToRecent.add(li);
 
                 Gson gson = new Gson();
                 json = gson.toJson(mPlaylist);
@@ -619,6 +625,8 @@ public class MediaService extends Service
                     Gson gson = new Gson();
                     mPlaylist = gson.fromJson(json, type);
                     playlistPosition = intent.getExtras().getInt("pos");
+                    RecentManagement addToRecent = new RecentManagement(recent);
+                    addToRecent.add(mPlaylist.get(0));
                 } else {
                     boolean exists = false;
                     int position = -1;
@@ -639,6 +647,9 @@ public class MediaService extends Service
                     } else {
                         ListItem li = new ListItem(title, artist, img, mediaFile, year);
                         mPlaylist.add(li);
+
+                        RecentManagement addToRecent = new RecentManagement(recent);
+                        addToRecent.add(li);
 
                         Gson gson = new Gson();
                         json = gson.toJson(mPlaylist);

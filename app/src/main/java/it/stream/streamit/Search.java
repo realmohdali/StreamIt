@@ -536,7 +536,7 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
     }
 
     private void loadSearchedData(String s) {
-        RetrieveSearchedData retrieveSearchedData = new RetrieveSearchedData(db, getApplicationContext());
+        RetrieveSearchedData retrieveSearchedData = new RetrieveSearchedData(db);
         List<ListItem> mList = retrieveSearchedData.getData(s);
 
         if (mList.size() > 0) {

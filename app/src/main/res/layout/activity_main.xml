@@ -14,15 +14,14 @@
 
         <include
             android:id="@+id/loadingScreen"
-            layout="@layout/load_screen" />
+            layout="@layout/load_screen"
+            android:visibility="gone" />
 
         <include
             android:id="@+id/mainContent"
-            layout="@layout/home_content"
-            android:visibility="gone" />
+            layout="@layout/home_content" />
 
     </RelativeLayout>
-
 
     <android.support.design.widget.NavigationView
         android:id="@+id/nav_view"

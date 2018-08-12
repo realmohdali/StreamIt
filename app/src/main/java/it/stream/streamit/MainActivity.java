@@ -45,6 +45,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
+import java.security.Principal;
 import java.util.List;
 
 import it.stream.streamit.adapters.PagerAdapter;
@@ -136,6 +137,8 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        registerSearchDataLoaded();
+
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
         killed = sp.getBoolean("killed", true);
         if (killed) {
@@ -147,26 +150,10 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         SQLiteDatabase search = openOrCreateDatabase("search", MODE_PRIVATE, null);
 
         if (ConnectionCheck.isConnected(this)) {
-            LoadServerData loadServerData = new LoadServerData(search, this);
+            LoadServerData loadServerData = new LoadServerData(search, getApplicationContext());
             loadServerData.loadData();
         }
-
-        db = openOrCreateDatabase("favorite", MODE_PRIVATE, null);
-
-        float scale = getResources().getDisplayMetrics().density;
-        marginInPx = (int) (50 * scale + 0.5f);
-
-        checkPermissions();
-
-        mediaPlayerUI = findViewById(R.id.bottom_sheet);
-        mediaPlayerUI.setVisibility(View.GONE);
-
-        mDrawerLayout = findViewById(R.id.drawer_layout);
-        setUpToolbar();
-        setUpTabs();
-        setUpNavDrawer();
-        loadActivity();
-        loadBottomSheet();
+        loadEverything();
     }
 
     @Override
@@ -212,6 +199,25 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
 
     //Methods to load data on screen
 
+    private void loadEverything() {
+        db = openOrCreateDatabase("favorite", MODE_PRIVATE, null);
+
+        float scale = getResources().getDisplayMetrics().density;
+        marginInPx = (int) (50 * scale + 0.5f);
+
+        checkPermissions();
+
+        mediaPlayerUI = findViewById(R.id.bottom_sheet);
+        mediaPlayerUI.setVisibility(View.GONE);
+
+        mDrawerLayout = findViewById(R.id.drawer_layout);
+        setUpToolbar();
+        setUpTabs();
+        setUpNavDrawer();
+        loadActivity();
+        loadBottomSheet();
+    }
+
     private void loadActivity() {
 
         registerPlayerPrepared();
@@ -223,7 +229,6 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         registerResume();
         registerResetPlayerUI();
         registerSeekUpdate();
-        registerSearchDataLoaded();
 
         //Bottom Sheet Stuff
         pb = findViewById(R.id.play);
@@ -280,7 +285,9 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
 
         final ViewPager viewPager = findViewById(R.id.pager);
 
-        final PagerAdapter pagerAdapter = new PagerAdapter(getSupportFragmentManager(), tabLayout.getTabCount(), getApplicationContext(), mActivity);
+        final SQLiteDatabase recentDatabase = openOrCreateDatabase("recent", MODE_PRIVATE, null);
+
+        final PagerAdapter pagerAdapter = new PagerAdapter(getSupportFragmentManager(), tabLayout.getTabCount(), getApplicationContext(), mActivity, recentDatabase);
 
         viewPager.setAdapter(pagerAdapter);
 
@@ -743,6 +750,7 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
             CoordinatorLayout mainContent = findViewById(R.id.mainContent);
             loadScreen.setVisibility(View.GONE);
             mainContent.setVisibility(View.VISIBLE);
+            //loadEverything();
         }
     };
 

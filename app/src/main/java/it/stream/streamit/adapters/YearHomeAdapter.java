@@ -10,6 +10,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -46,13 +47,13 @@ public class YearHomeAdapter extends RecyclerView.Adapter<YearHomeAdapter.ViewHo
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder viewHolder, final int i) {
-        viewHolder.t.setText(mYearList.get(i).getYear());
+        //viewHolder.t.setText(mYearList.get(i).getYear());
         Glide.with(mContext)
                 .asBitmap()
                 .load(mYearList.get(i).getImageUrl())
                 .apply(bitmapTransform(new RoundedCornersTransformation(5, 0, RoundedCornersTransformation.CornerType.ALL)))
                 .into(viewHolder.iv);
-        viewHolder.cv.setOnClickListener(new View.OnClickListener() {
+        viewHolder.item.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if (ConnectionCheck.isConnected(mContext)) {
@@ -73,15 +74,17 @@ public class YearHomeAdapter extends RecyclerView.Adapter<YearHomeAdapter.ViewHo
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        TextView t;
+        //TextView t;
         ImageView iv;
-        CardView cv;
+        //CardView cv;
+        RelativeLayout item;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            t = itemView.findViewById(R.id.title);
+            //t = itemView.findViewById(R.id.title);
             iv = itemView.findViewById(R.id.image);
-            cv = itemView.findViewById(R.id.cardView);
+            item = itemView.findViewById(R.id.item);
+            //cv = itemView.findViewById(R.id.cardView);
         }
     }
 }

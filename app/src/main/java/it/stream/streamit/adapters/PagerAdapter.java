@@ -2,6 +2,7 @@ package it.stream.streamit.adapters;
 
 import android.app.Activity;
 import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
@@ -14,12 +15,14 @@ public class PagerAdapter extends FragmentStatePagerAdapter {
     private Home_Tab_Fragment tab;
     private Context context;
     private Activity mActivity;
+    private SQLiteDatabase database;
 
-    public PagerAdapter(FragmentManager fm, int mNumOfTabs, Context context, Activity mActivity) {
+    public PagerAdapter(FragmentManager fm, int mNumOfTabs, Context context, Activity mActivity, SQLiteDatabase database) {
         super(fm);
         this.mNumOfTabs = mNumOfTabs;
         this.context = context;
         this.mActivity = mActivity;
+        this.database = database;
     }
 
     @Override
@@ -28,6 +31,7 @@ public class PagerAdapter extends FragmentStatePagerAdapter {
         tab.setPosition(i);
         tab.setContext(context);
         tab.setmActivity(mActivity);
+        tab.setDatabase(database);
         return tab;
     }
 
