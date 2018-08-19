@@ -18,22 +18,20 @@ public class RecentManagement {
 
     public void add(ListItem listItem) {
         String url = listItem.getURL();
-        if (!alreadyExist(url)) {
-            String title = listItem.getTitle();
-            String artist = listItem.getArtist();
-            String img = listItem.getImageUrl();
-            String year = listItem.getYear();
-            database.execSQL("INSERT INTO recent (title, artist, url, image, year) VALUES ('" + title + "','" + artist + "','" + url + "', '" + img + "', '" + year + "')");
-        }
+        alreadyExist(url);
+        String title = listItem.getTitle();
+        String artist = listItem.getArtist();
+        String img = listItem.getImageUrl();
+        String year = listItem.getYear();
+        database.execSQL("INSERT INTO recent (title, artist, url, image, year) VALUES ('" + title + "','" + artist + "','" + url + "', '" + img + "', '" + year + "')");
+
     }
 
-    private boolean alreadyExist(String url) {
+    private void alreadyExist(String url) {
         Cursor cursor = database.rawQuery("SELECT * FROM recent WHERE url = '" + url + "'", null);
         cursor.moveToFirst();
         if (cursor.getCount() > 0) {
-            return true;
-        } else {
-            return false;
+            database.execSQL("DELETE FROM recent WHERE url  = '" + url + "'");
         }
     }
 

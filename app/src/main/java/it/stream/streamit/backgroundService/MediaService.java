@@ -72,6 +72,10 @@ public class MediaService extends Service
     //Audio URL
     private String mediaFile;
 
+    //Handling Call state
+    private TelephonyManager telephonyManager;
+    private PhoneStateListener phoneStateListener;
+
     //Audio title img sub
     private String title, sub, img, year, artist;
     private boolean isLoading, haveTrack, isPlaying;
@@ -83,10 +87,6 @@ public class MediaService extends Service
     //Handle Seek Update
     private Handler handler;
     private boolean running = false;
-
-    //Incoming phone call handler
-    private boolean onGoingCall = false;
-    private boolean shouldPlay = false;
 
     //Loop strings
     private static final int noLoop = 1;
@@ -215,6 +215,7 @@ public class MediaService extends Service
         unregisterReceiver(stop);
         unregisterReceiver(seek);
         unregisterReceiver(removeTrack);
+        telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_NONE);
 
         if (running) {
             handler.removeCallbacks(seekUpdate);
@@ -567,43 +568,24 @@ public class MediaService extends Service
     }
 
     private void callStateListener() {
-        //Get the telephony manager
-        TelephonyManager telephonyManager =
-                (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-        //Starting listening for PhoneState changes
-        PhoneStateListener phoneStateListener = new PhoneStateListener() {
+        telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        phoneStateListener = new PhoneStateListener() {
             @Override
             public void onCallStateChanged(int state, String incomingNumber) {
                 switch (state) {
-                    //if at least one call exist or phone is ringing
-                    //pause the MediaPlayer
                     case TelephonyManager.CALL_STATE_OFFHOOK:
                     case TelephonyManager.CALL_STATE_RINGING:
                         if (mediaPlayer != null) {
                             if (mediaPlayer.isPlaying()) {
                                 pauseMedia();
-                                onGoingCall = true;
-                                shouldPlay = true;
                             }
                         }
                         break;
                     case TelephonyManager.CALL_STATE_IDLE:
-                        //Phone idle. Start playing
-                        if (mediaPlayer != null) {
-                            if (shouldPlay) {
-                                if (onGoingCall) {
-                                    onGoingCall = false;
-                                    shouldPlay = false;
-                                    resumeMedia();
-                                }
-                            }
-                        }
                         break;
                 }
             }
         };
-        //Register the listener with the telephony manager
-        //listen for changes to device call state
         assert telephonyManager != null;
         telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
     }

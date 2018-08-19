@@ -3,7 +3,6 @@ package it.stream.streamit.tabFragments;
 import android.app.Activity;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -15,7 +14,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -23,7 +21,6 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
-import com.bumptech.glide.ListPreloader;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -59,7 +56,6 @@ public class Home_Tab_Fragment extends Fragment {
     private List<YearList> mYearList;
 
     //URLs
-    private static final String URL1 = "http://realmohdali.000webhostapp.com/streamIt/php_modules/whatsNew.php";
     private static final String URL2 = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showArtist.php";
     private static final String URL3 = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showYear.php";
 
@@ -97,6 +93,7 @@ public class Home_Tab_Fragment extends Fragment {
                 refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
                     @Override
                     public void onRefresh() {
+                        mListItems = new ArrayList<>();
                         loadNew();
                     }
                 });
@@ -106,6 +103,7 @@ public class Home_Tab_Fragment extends Fragment {
                 refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
                     @Override
                     public void onRefresh() {
+                        mArtistList = new ArrayList<>();
                         loadArtist();
                     }
                 });
@@ -115,6 +113,7 @@ public class Home_Tab_Fragment extends Fragment {
                 refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
                     @Override
                     public void onRefresh() {
+                        mYearList = new ArrayList<>();
                         loadYear();
                     }
                 });
