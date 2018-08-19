@@ -356,10 +356,12 @@ public class MediaService extends Service
             case MediaPlayer.MEDIA_INFO_BUFFERING_START:
                 Intent intent = new Intent(Buffering);
                 sendBroadcast(intent);
+                showNotification(Status.Loading);
                 break;
             case MediaPlayer.MEDIA_INFO_BUFFERING_END:
                 Intent intent1 = new Intent(buffering_End);
                 sendBroadcast(intent1);
+                showNotification(Status.Playing);
                 break;
         }
         return false;
