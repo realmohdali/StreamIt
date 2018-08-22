@@ -174,6 +174,7 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
 
     @Override
     protected void onPause() {
+        readData();
         writeData();
         super.onPause();
     }

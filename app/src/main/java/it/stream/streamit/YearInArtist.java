@@ -189,6 +189,7 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
 
     @Override
     protected void onPause() {
+        readData();
         writeData();
         super.onPause();
     }

@@ -183,6 +183,7 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
 
     @Override
     protected void onPause() {
+        readData();
         writeData();
         super.onPause();
     }

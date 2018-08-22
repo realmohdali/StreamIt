@@ -190,6 +190,7 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
 
     @Override
     protected void onPause() {
+        readData();
         writeData();
         super.onPause();
     }
