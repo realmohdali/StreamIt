@@ -29,6 +29,7 @@ import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.view.View;
 import android.widget.RemoteViews;
+import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -75,6 +76,7 @@ public class MediaService extends Service
     //Handling Call state
     private TelephonyManager telephonyManager;
     private PhoneStateListener phoneStateListener;
+    private boolean Playing_Before_call;
 
     //Audio title img sub
     private String title, sub, img, year, artist;
@@ -175,6 +177,9 @@ public class MediaService extends Service
     @Override
     public void onCreate() {
         super.onCreate();
+
+        Playing_Before_call = false;
+
         registerNotificationPlay();
         registerNotificationPause();
         callStateListener();
@@ -235,7 +240,11 @@ public class MediaService extends Service
             case AUDIOFOCUS_GAIN:
                 //Resume playback
                 if (mediaPlayer == null) initMediaPlayer();
-                else if (!mediaPlayer.isPlaying()) mediaPlayer.start();
+                else if (!mediaPlayer.isPlaying()) {
+                    if (Playing_Before_call) {
+                        mediaPlayer.start();
+                    }
+                }
                 mediaPlayer.setVolume(1.0f, 1.0f);
                 break;
             case AUDIOFOCUS_LOSS:
@@ -580,10 +589,14 @@ public class MediaService extends Service
                         if (mediaPlayer != null) {
                             if (mediaPlayer.isPlaying()) {
                                 pauseMedia();
+                                Playing_Before_call = true;
                             }
                         }
                         break;
                     case TelephonyManager.CALL_STATE_IDLE:
+                        if (Playing_Before_call) {
+                            resumeMedia();
+                        }
                         break;
                 }
             }
@@ -729,6 +742,7 @@ public class MediaService extends Service
 
     public void pauseMedia() {
         if (mediaPlayer.isPlaying()) {
+            Playing_Before_call = false;
             mediaPlayer.pause();
             resumePosition = mediaPlayer.getCurrentPosition();
 
@@ -749,6 +763,8 @@ public class MediaService extends Service
         if (!mediaPlayer.isPlaying()) {
             mediaPlayer.seekTo(resumePosition);
             mediaPlayer.start();
+
+            Playing_Before_call = true;
 
             showNotification(Status.Playing);
 
