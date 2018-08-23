@@ -36,5 +36,12 @@
     <string name="remove">Remove</string>
     <string name="play_all">Play All</string>
     <string name="available_nohe">Available Nohe :</string>
+    <string name="player_background">Player Background</string>
+    <string name="title_of_the_track">Title of the Track</string>
+    <string name="album_art">Album Art</string>
+    <string name="_00_00">00:00</string>
+    <string name="repeat">Repeat</string>
+    <string name="title_of_track">Title of Track</string>
+    <string name="artist_2018">Artist | 2018</string>
 
 </resources>

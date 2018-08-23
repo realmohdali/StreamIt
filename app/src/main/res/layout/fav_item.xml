@@ -28,7 +28,7 @@
             android:layout_marginRight="10dp"
             android:layout_toLeftOf="@id/delete_icon"
             android:text="@string/remove"
-            android:textColor="#FFF"
+            android:textColor="@color/colorBlack"
             android:textSize="13dp" />
 
     </RelativeLayout>

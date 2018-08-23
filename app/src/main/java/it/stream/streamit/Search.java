@@ -52,7 +52,9 @@ import it.stream.streamit.backgroundService.MediaService;
 import it.stream.streamit.dataList.ListItem;
 import it.stream.streamit.database.FavoriteManagement;
 import it.stream.streamit.database.RetrieveSearchedData;
+import jp.wasabeef.glide.transformations.BlurTransformation;
 
+import static com.bumptech.glide.request.RequestOptions.bitmapTransform;
 import static it.stream.streamit.backgroundService.MediaPlayerControllerConstants.ACTION_NEXT;
 import static it.stream.streamit.backgroundService.MediaPlayerControllerConstants.ACTION_PAUSE;
 import static it.stream.streamit.backgroundService.MediaPlayerControllerConstants.ACTION_PLAY;
@@ -93,7 +95,7 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
     private ImageButton pb;
     private ImageButton con;
     private TextView ct, st, tt, ts, cp, du;
-    private ImageView iv1, iv2;
+    private ImageView iv1, iv2, iv3;
     private boolean expanded;
     private SeekBar mSeekBar;
     private ProgressBar loading, loadingExp;
@@ -231,6 +233,7 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
         ts = findViewById(R.id.trackSub);
         iv1 = findViewById(R.id.img);
         iv2 = findViewById(R.id.albumArt);
+        iv3 = findViewById(R.id.albumArtBack);
         cp = findViewById(R.id.cTime);
         du = findViewById(R.id.eTime);
         mSeekBar = findViewById(R.id.seekBar);
@@ -768,13 +771,13 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
                 Intent intent = new Intent(ACTION_PAUSE);
                 sendBroadcast(intent);
                 pb.setImageResource(R.drawable.ic_play_arrow);
-                con.setImageResource(R.drawable.ic_play_arrow);
+                con.setImageResource(R.drawable.ic_play_circle);
                 playing = false;
             } else {
                 Intent intent = new Intent(ACTION_PLAY);
                 sendBroadcast(intent);
                 pb.setImageResource(R.drawable.ic_pause);
-                con.setImageResource(R.drawable.ic_pause);
+                con.setImageResource(R.drawable.ic_pause_circle);
                 playing = true;
             }
         } else {
@@ -798,6 +801,11 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
                     .asBitmap()
                     .load(trackImg)
                     .into(iv2);
+            Glide.with(this)
+                    .asBitmap()
+                    .load(trackImg)
+                    .apply(bitmapTransform(new BlurTransformation(10, 3)))
+                    .into(iv3);
 
             pb.setVisibility(View.GONE);
             con.setVisibility(View.GONE);
@@ -855,6 +863,11 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
                         .asBitmap()
                         .load(trackImg)
                         .into(iv2);
+                Glide.with(this)
+                        .asBitmap()
+                        .load(trackImg)
+                        .apply(bitmapTransform(new BlurTransformation(10, 3)))
+                        .into(iv3);
                 mProgressBar.setMax(intDuration);
 
                 mSeekBar.setProgress(currentTime);
@@ -869,10 +882,10 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
 
             if (playing) {
                 pb.setImageResource(R.drawable.ic_pause);
-                con.setImageResource(R.drawable.ic_pause);
+                con.setImageResource(R.drawable.ic_pause_circle);
             } else {
                 pb.setImageResource(R.drawable.ic_play_arrow);
-                con.setImageResource(R.drawable.ic_play_arrow);
+                con.setImageResource(R.drawable.ic_play_circle);
             }
         }
 
