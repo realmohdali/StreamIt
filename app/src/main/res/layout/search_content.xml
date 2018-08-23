@@ -54,6 +54,11 @@
 
         </android.support.v7.widget.Toolbar>
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/colorGray" />
+
         <RelativeLayout
             android:id="@+id/noResult"
             android:layout_width="match_parent"

@@ -1,26 +1,17 @@
 package it.stream.streamit;
 
-import android.Manifest;
-import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
-import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomSheetBehavior;
-import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.NavigationView;
-import android.support.design.widget.TabLayout;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v4.view.GravityCompat;
-import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -31,11 +22,8 @@ import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
@@ -47,17 +35,13 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
-import java.security.Principal;
 import java.util.List;
 
-import it.stream.streamit.adapters.PagerAdapter;
 import it.stream.streamit.adapters.QueueAdapter;
 import it.stream.streamit.adapters.RemoveQueueItem;
 import it.stream.streamit.backgroundService.MediaService;
 import it.stream.streamit.dataList.ListItem;
-import it.stream.streamit.database.ConnectionCheck;
 import it.stream.streamit.database.FavoriteManagement;
-import it.stream.streamit.database.LoadServerData;
 import jp.wasabeef.glide.transformations.BlurTransformation;
 
 import static com.bumptech.glide.request.RequestOptions.bitmapTransform;
@@ -72,25 +56,20 @@ import static it.stream.streamit.backgroundService.MediaService.Broadcast_PLAYER
 import static it.stream.streamit.backgroundService.MediaService.Buffering_Update;
 import static it.stream.streamit.backgroundService.MediaService.New_Audio;
 import static it.stream.streamit.backgroundService.MediaService.buffering_End;
-import static it.stream.streamit.database.LoadServerData.DATA_LOADED;
 
-public class MainActivity extends AppCompatActivity implements RemoveQueueItem.SwipeToRemoveListener {
+public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToRemoveListener {
 
     private Toolbar toolbar;
     private DrawerLayout mDrawerLayout;
     private boolean drawerOpen;
-    private ViewPager mViewPagerControl;
     private RelativeLayout mediaPlayerUI;
     private String trackUrl;
     private SQLiteDatabase db;
-
 
     private String mediaQueue;
 
     private boolean playing;
     private boolean serviceRunning;
-
-    private Activity mActivity = (Activity) this;
 
     //BottomSheetStuff
     private ImageButton pb;
@@ -117,47 +96,34 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
     private static final int loopAll = 2;
     private static final int loopOne = 3;
 
-    private boolean doubleBackToExitPressedOnce = false;
 
-
-    //Permission Request constants
-    private static final int MY_PERMISSION_REQUEST_READ_PHONE_STATE = 1;
-    private static final int MY_PERMISSION_REQUEST_ACCESS_NETWORK_STATE = 2;
-    private static final int MY_PERMISSION_REQUEST_INTERNET = 3;
-
-    private int marginInPx;
-
-    private boolean killed = true;
-
-    private QueueAdapter adapter;
+    private QueueAdapter qAdapter;
     private int playerPosition;
     private LinearLayoutManager linearLayoutManager;
 
     //______________________________________________________________________________________________
 
     //Activity lifecycle
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        registerSearchDataLoaded();
+        setContentView(R.layout.activity_about);
 
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-        killed = sp.getBoolean("killed", true);
-        if (killed) {
-            clearData();
-        } else {
-            killed = true;
-        }
+        SharedPreferences.Editor editor = sp.edit();
+        editor.putBoolean("killed", true);
+        editor.apply();
 
-        SQLiteDatabase search = openOrCreateDatabase("search", MODE_PRIVATE, null);
+        db = openOrCreateDatabase("favorite", MODE_PRIVATE, null);
 
-        if (ConnectionCheck.isConnected(this)) {
-            LoadServerData loadServerData = new LoadServerData(search, getApplicationContext());
-            loadServerData.loadData();
-        }
-        loadEverything();
+        mediaPlayerUI = findViewById(R.id.bottom_sheet);
+        mediaPlayerUI.setVisibility(View.GONE);
+
+        mDrawerLayout = findViewById(R.id.drawer_layout);
+        setUpToolbar();
+        loadActivity();
+        loadBottomSheet();
     }
 
     @Override
@@ -167,9 +133,6 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         setUpNavDrawer();
         if (haveTrack) {
             mediaPlayerUI.setVisibility(View.VISIBLE);
-            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) mViewPagerControl.getLayoutParams();
-            params.setMargins(0, 0, 0, marginInPx);
-            mViewPagerControl.setLayoutParams(params);
             loadPlayer();
         }
     }
@@ -185,7 +148,6 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         unregisterReceiver(resume);
         unregisterReceiver(resetPlayerUI);
         unregisterReceiver(seekUpdate);
-        unregisterReceiver(searchDataLoaded);
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor editor = sp.edit();
         editor.putBoolean("killed", false);
@@ -203,24 +165,6 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
     //______________________________________________________________________________________________
 
     //Methods to load data on screen
-
-    private void loadEverything() {
-        db = openOrCreateDatabase("favorite", MODE_PRIVATE, null);
-
-        float scale = getResources().getDisplayMetrics().density;
-        marginInPx = (int) (50 * scale + 0.5f);
-
-        checkPermissions();
-
-        mediaPlayerUI = findViewById(R.id.bottom_sheet);
-        mediaPlayerUI.setVisibility(View.GONE);
-
-        mDrawerLayout = findViewById(R.id.drawer_layout);
-        setUpToolbar();
-        setUpTabs();
-        loadActivity();
-        loadBottomSheet();
-    }
 
     private void loadActivity() {
 
@@ -264,89 +208,40 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         loopStatus = noLoop;
 
         trackUrl = "";
-
-
-        mViewPagerControl = findViewById(R.id.pager);
-
-        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) mViewPagerControl.getLayoutParams();
-        params.setMargins(0, 0, 0, 0);
-        mViewPagerControl.setLayoutParams(params);
-
     }
 
     private void setUpToolbar() {
         toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setHomeAsUpIndicator(R.drawable.ic_menu);
-    }
-
-    private void setUpTabs() {
-        TabLayout tabLayout = findViewById(R.id.tab_layout);
-        tabLayout.addTab(tabLayout.newTab().setText(R.string.tabRecent));
-        tabLayout.addTab(tabLayout.newTab().setText(R.string.tabArtist));
-        tabLayout.addTab(tabLayout.newTab().setText(R.string.tabYear));
-        tabLayout.setTabGravity(TabLayout.GRAVITY_FILL);
-
-        final ViewPager viewPager = findViewById(R.id.pager);
-
-        final SQLiteDatabase recentDatabase = openOrCreateDatabase("recent", MODE_PRIVATE, null);
-
-        final PagerAdapter pagerAdapter = new PagerAdapter(getSupportFragmentManager(), tabLayout.getTabCount(), getApplicationContext(), mActivity, recentDatabase);
-
-        viewPager.setAdapter(pagerAdapter);
-
-        viewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabLayout));
-
-        tabLayout.addOnTabSelectedListener(new TabLayout.BaseOnTabSelectedListener() {
-            @Override
-            public void onTabSelected(TabLayout.Tab tab) {
-                viewPager.setCurrentItem(tab.getPosition());
-            }
-
-            @Override
-            public void onTabUnselected(TabLayout.Tab tab) {
-
-            }
-
-            @Override
-            public void onTabReselected(TabLayout.Tab tab) {
-
-            }
-        });
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
+        getSupportActionBar().setTitle(R.string.about);
     }
 
     private void setUpNavDrawer() {
         mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END);
         NavigationView navigationView = findViewById(R.id.nav_view);
         drawerOpen = false;
-        navigationView.getMenu().getItem(0).setChecked(true);
+        navigationView.getMenu().getItem(2).setChecked(true);
         navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
             @Override
             public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
                 switch (menuItem.getItemId()) {
                     case R.id.homePage:
                         mDrawerLayout.closeDrawers();
+                        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                        startActivity(intent);
+                        overridePendingTransition(0, 0);
                         return true;
                     case R.id.favOption:
                         mDrawerLayout.closeDrawers();
-                        if (ConnectionCheck.isConnected(getApplicationContext())) {
-                            Intent intent = new Intent(getApplicationContext(), Favorite.class);
-                            startActivity(intent);
-                            overridePendingTransition(0, 0);
-                        } else {
-                            Toast.makeText(getApplicationContext(), R.string.offline, Toast.LENGTH_SHORT).show();
-                        }
+                        Intent intent1 = new Intent(getApplicationContext(), Favorite.class);
+                        startActivity(intent1);
+                        overridePendingTransition(0, 0);
                         return true;
                     case R.id.about:
                         mDrawerLayout.closeDrawers();
-                        if (ConnectionCheck.isConnected(getApplicationContext())) {
-                            Intent intent = new Intent(getApplicationContext(), About.class);
-                            startActivity(intent);
-                            overridePendingTransition(0, 0);
-                        } else {
-                            Toast.makeText(getApplicationContext(), R.string.offline, Toast.LENGTH_SHORT).show();
-                        }
                         return true;
                     default:
                         mDrawerLayout.closeDrawers();
@@ -558,8 +453,7 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
     //Methods to load data on screen End
     //______________________________________________________________________________________________
 
-
-//Broadcast Receivers
+    //Broadcast Receivers
 
     private BroadcastReceiver playerPrepared = new BroadcastReceiver() {
         @Override
@@ -583,7 +477,7 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
             loadPlayer();
             writeData();
 
-            adapter.update("playing", playerPosition);
+            qAdapter.update("playing", playerPosition);
             linearLayoutManager.scrollToPosition(playerPosition);
         }
     };
@@ -597,15 +491,13 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         @Override
         public void onReceive(Context context, Intent intent) {
             readData();
+
             mediaPlayerUI.setVisibility(View.VISIBLE);
-            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) mViewPagerControl.getLayoutParams();
-            params.setMargins(0, 0, 0, marginInPx);
-            mViewPagerControl.setLayoutParams(params);
 
             loadPlayer();
             writeData();
 
-            adapter.update("loading", playerPosition);
+            qAdapter.update("loading", playerPosition);
             linearLayoutManager.scrollToPosition(playerPosition);
         }
     };
@@ -707,9 +599,6 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
             }
 
             mediaPlayerUI.setVisibility(View.GONE);
-            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) mViewPagerControl.getLayoutParams();
-            params.setMargins(0, 0, 0, 0);
-            mViewPagerControl.setLayoutParams(params);
         }
     };
 
@@ -754,25 +643,8 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         registerReceiver(seekUpdate, filter);
     }
 
-    private BroadcastReceiver searchDataLoaded = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            RelativeLayout loadScreen = findViewById(R.id.loadingScreen);
-            CoordinatorLayout mainContent = findViewById(R.id.mainContent);
-            loadScreen.setVisibility(View.GONE);
-            mainContent.setVisibility(View.VISIBLE);
-            //loadEverything();
-        }
-    };
-
-    private void registerSearchDataLoaded() {
-        IntentFilter filter = new IntentFilter(DATA_LOADED);
-        registerReceiver(searchDataLoaded, filter);
-    }
-
     //Broadcast Receivers end
     //______________________________________________________________________________________________
-
 
     //Loading and controlling media player
 
@@ -917,14 +789,14 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         ItemTouchHelper.SimpleCallback itemTouchHelperCallback = new RemoveQueueItem(0, ItemTouchHelper.LEFT, this);
         new ItemTouchHelper(itemTouchHelperCallback).attachToRecyclerView(queue);
 
-        adapter = new QueueAdapter(getApplicationContext(), mPlaylist);
-        queue.setAdapter(adapter);
+        qAdapter = new QueueAdapter(getApplicationContext(), mPlaylist);
+        queue.setAdapter(qAdapter);
 
         if (isLoading) {
-            adapter.update("loading", playerPosition);
+            qAdapter.update("loading", playerPosition);
             linearLayoutManager.scrollToPosition(playerPosition);
         } else if (playing) {
-            adapter.update("playing", playerPosition);
+            qAdapter.update("playing", playerPosition);
             linearLayoutManager.scrollToPosition(playerPosition);
         }
 
@@ -975,50 +847,19 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         editor.apply();
     }
 
-    private void clearData() {
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putString("title", "Track Title");
-        editor.putString("sub", "Artist | Year");
-        editor.putString("img", "");
-        editor.putBoolean("loading", false);
-        editor.putBoolean("playing", false);
-        editor.putBoolean("haveTrack", false);
-        editor.putInt("currentTime", 0);
-        editor.putString("currentStringTime", "00:00");
-        editor.putInt("intDuration", 0);
-        editor.putString("duration", "00:00");
-        editor.putBoolean("fav", false);
-        editor.putString("playlist", "");
-        editor.putBoolean("serviceRunning", false);
-
-        editor.apply();
-    }
-
     //Data Related operations Done
     //______________________________________________________________________________________________
 
     @Override
     public void onBackPressed() {
-
         if (drawerOpen) {
             mDrawerLayout.closeDrawers();
         } else if (expanded) {
             sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
         } else {
-            if (doubleBackToExitPressedOnce) {
-                super.onBackPressed();
-                return;
-            }
-            this.doubleBackToExitPressedOnce = true;
-            Toast.makeText(getApplicationContext(), "Please click BACK again to exit", Toast.LENGTH_SHORT).show();
-            new Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    doubleBackToExitPressedOnce = false;
-
-                }
-            }, 2000);
+            finish();
+            overridePendingTransition(0, 0);
+            writeData();
         }
     }
 
@@ -1028,18 +869,17 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
             case android.R.id.home:
                 if (expanded) {
                     sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                    return true;
                 } else {
-                    mDrawerLayout.openDrawer(GravityCompat.START);
-                }
-                return true;
-            case R.id.srchBtn:
-                if (ConnectionCheck.isConnected(this)) {
-                    Intent intent = new Intent(this, Search.class);
-                    startActivity(intent);
+                    writeData();
+                    finish();
                     overridePendingTransition(0, 0);
-                } else {
-                    Toast.makeText(this, R.string.offline, Toast.LENGTH_SHORT).show();
+                    return true;
                 }
+            case R.id.srchBtn:
+                Intent intent = new Intent(this, Search.class);
+                startActivity(intent);
+                overridePendingTransition(0, 0);
                 return true;
             case R.id.showQueue:
                 mDrawerLayout.openDrawer(GravityCompat.END);
@@ -1055,59 +895,9 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
             return true;
         } else {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setHomeAsUpIndicator(R.drawable.ic_menu);
+            getSupportActionBar().setDisplayShowHomeEnabled(true);
             getMenuInflater().inflate(R.menu.main_menu, menu);
             return true;
-        }
-    }
-
-    //______________________________________________________________________________________________
-
-    //Check for permission
-    private void checkPermissions() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_PHONE_STATE}, MY_PERMISSION_REQUEST_READ_PHONE_STATE);
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_NETWORK_STATE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_NETWORK_STATE}, MY_PERMISSION_REQUEST_ACCESS_NETWORK_STATE);
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.INTERNET}, MY_PERMISSION_REQUEST_INTERNET);
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-            case MY_PERMISSION_REQUEST_READ_PHONE_STATE:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    //Permission granted
-                } else {
-                    //Permission denied
-                    Toast.makeText(this, "Please grant the permission or/nThe app will crash when you receive a phone call", Toast.LENGTH_LONG).show();
-                    checkPermissions();
-                }
-                break;
-            case MY_PERMISSION_REQUEST_ACCESS_NETWORK_STATE:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    //Permission granted
-                } else {
-                    //Permission denied
-                    Toast.makeText(this, "Please grant the permission or/nThe app will crash", Toast.LENGTH_LONG).show();
-                    checkPermissions();
-                }
-                break;
-            case MY_PERMISSION_REQUEST_INTERNET:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    //Permission granted
-                } else {
-                    //Permission denied
-                    Toast.makeText(this, "Please grant the permission or/nThe app will crash", Toast.LENGTH_LONG).show();
-                    checkPermissions();
-                }
-                break;
-            default:
         }
     }
 
@@ -1115,10 +905,8 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
     public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction, int position) {
         if (viewHolder instanceof QueueAdapter.ViewHolder) {
             if (viewHolder.getAdapterPosition() != playerPosition) {
-                adapter.removeItem(viewHolder.getAdapterPosition());
+                qAdapter.removeItem(viewHolder.getAdapterPosition());
             }
         }
     }
-
-    //Check for permission end
 }

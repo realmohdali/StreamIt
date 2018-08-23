@@ -14,7 +14,6 @@
         android:roundIcon="@mipmap/ic_launcher_new_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-
         <activity
             android:name=".MainActivity"
             android:screenOrientation="nosensor"
@@ -25,7 +24,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
         <activity
             android:name=".YearInArtist"
             android:screenOrientation="nosensor"
@@ -42,7 +40,7 @@
             android:name=".Search"
             android:screenOrientation="nosensor"
             android:theme="@style/tabTheme"
-            android:windowSoftInputMode="stateAlwaysVisible"></activity>
+            android:windowSoftInputMode="stateAlwaysVisible" />
 
         <service android:name=".backgroundService.MediaService" />
 
@@ -52,6 +50,11 @@
                 <action android:name="android.media.AUDIO_BECOMING_NOISY" />
             </intent-filter>
         </receiver>
+
+        <activity
+            android:name=".About"
+            android:screenOrientation="nosensor"
+            android:theme="@style/tabTheme"></activity>
     </application>
 
 </manifest>

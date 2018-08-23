@@ -43,5 +43,9 @@
     <string name="repeat">Repeat</string>
     <string name="title_of_track">Title of Track</string>
     <string name="artist_2018">Artist | 2018</string>
+    <string name="about_app">
+        Matam is a non profit app developed to honor the greatest sacrifice of Imam Hussain (A.s)
+        and to spreading the message of Imam Hussain (A.s) through Noha.
+    </string>
 
 </resources>

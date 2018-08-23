@@ -184,7 +184,6 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
 
     @Override
     protected void onPause() {
-        readData();
         writeData();
         super.onPause();
     }
@@ -289,7 +288,9 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
                         return true;
                     case R.id.about:
                         mDrawerLayout.closeDrawers();
-                        Toast.makeText(getApplicationContext(), "About is clicked", Toast.LENGTH_SHORT).show();
+                        Intent intent2 = new Intent(getApplicationContext(), About.class);
+                        startActivity(intent2);
+                        overridePendingTransition(0, 0);
                         return true;
                     default:
                         mDrawerLayout.closeDrawers();
@@ -960,7 +961,6 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
         editor.putString("duration", duration);
         editor.putInt("loop", loopStatus);
         editor.putBoolean("fav", isFav);
-        editor.putString("playlist", mediaQueue);
         editor.putBoolean("serviceRunning", serviceRunning);
         editor.apply();
     }

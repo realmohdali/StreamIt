@@ -49,14 +49,31 @@ public class ArtistHomeAdapter extends RecyclerView.Adapter<ArtistHomeAdapter.Vi
 
     @Override
     public void onBindViewHolder(@NonNull final ViewHolder viewHolder, final int i) {
+
+        if (i % 2 == 0) {
+            viewHolder.right.setVisibility(View.GONE);
+            viewHolder.left.setVisibility(View.VISIBLE);
+        } else {
+            viewHolder.left.setVisibility(View.GONE);
+            viewHolder.right.setVisibility(View.VISIBLE);
+        }
+
         viewHolder.t.setText(mArtistList.get(i).getArtist());
+        viewHolder.title.setText(mArtistList.get(i).getArtist());
         viewHolder.nat.setText(mArtistList.get(i).getNationality());
+        viewHolder.nationality.setText(mArtistList.get(i).getNationality());
         viewHolder.year.setText(mArtistList.get(i).getYears());
+        viewHolder.yearEven.setText(mArtistList.get(i).getYears());
         Glide.with(mContext)
                 .asBitmap()
                 .load(mArtistList.get(i).getImageUrl())
                 .apply(bitmapTransform(new RoundedCornersTransformation(5, 0, RoundedCornersTransformation.CornerType.ALL)))
                 .into(viewHolder.iv);
+        Glide.with(mContext)
+                .asBitmap()
+                .load(mArtistList.get(i).getImageUrl())
+                .apply(bitmapTransform(new RoundedCornersTransformation(5, 0, RoundedCornersTransformation.CornerType.ALL)))
+                .into(viewHolder.ivEven);
         final String image = mArtistList.get(i).getImageUrl();
         viewHolder.item.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -80,18 +97,24 @@ public class ArtistHomeAdapter extends RecyclerView.Adapter<ArtistHomeAdapter.Vi
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        TextView t, nat, year;
-        ImageView iv;
-        LinearLayout item;
+        TextView t, nat, year, title, nationality, yearEven;
+        ImageView iv, ivEven;
+        LinearLayout item, left, right;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
+            left = itemView.findViewById(R.id.imageLeft);
+            right = itemView.findViewById(R.id.imageRight);
             t = itemView.findViewById(R.id.title);
             iv = itemView.findViewById(R.id.image);
             item = itemView.findViewById(R.id.item);
             nat = itemView.findViewById(R.id.nationality);
             year = itemView.findViewById(R.id.years);
             t.setSelected(true);
+            title = itemView.findViewById(R.id.titleEven);
+            nationality = itemView.findViewById(R.id.nationalityEven);
+            yearEven = itemView.findViewById(R.id.yearsEven);
+            ivEven = itemView.findViewById(R.id.imageEven);
         }
     }
 }

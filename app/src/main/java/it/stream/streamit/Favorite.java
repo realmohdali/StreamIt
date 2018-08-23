@@ -46,6 +46,7 @@ import it.stream.streamit.adapters.RemoveQueueItem;
 import it.stream.streamit.adapters.SwipeToRemove;
 import it.stream.streamit.backgroundService.MediaService;
 import it.stream.streamit.dataList.ListItem;
+import it.stream.streamit.database.ConnectionCheck;
 import it.stream.streamit.database.FavoriteManagement;
 import jp.wasabeef.glide.transformations.BlurTransformation;
 
@@ -175,7 +176,6 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
 
     @Override
     protected void onPause() {
-        readData();
         writeData();
         super.onPause();
     }
@@ -299,7 +299,9 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
                         return true;
                     case R.id.about:
                         mDrawerLayout.closeDrawers();
-                        Toast.makeText(getApplicationContext(), "About is clicked", Toast.LENGTH_SHORT).show();
+                        Intent intent1 = new Intent(getApplicationContext(), About.class);
+                        startActivity(intent1);
+                        overridePendingTransition(0, 0);
                         return true;
                     default:
                         mDrawerLayout.closeDrawers();
@@ -915,7 +917,6 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
         editor.putString("duration", duration);
         editor.putInt("loop", loopStatus);
         editor.putBoolean("fav", isFav);
-        editor.putString("playlist", mediaQueue);
         editor.putBoolean("serviceRunning", serviceRunning);
         editor.apply();
     }
