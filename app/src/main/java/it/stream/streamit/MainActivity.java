@@ -160,6 +160,7 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
     protected void onResume() {
         super.onResume();
         readData();
+        setUpNavDrawer();
         if (haveTrack) {
             mediaPlayerUI.setVisibility(View.VISIBLE);
             LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) mViewPagerControl.getLayoutParams();
@@ -214,7 +215,6 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         mDrawerLayout = findViewById(R.id.drawer_layout);
         setUpToolbar();
         setUpTabs();
-        setUpNavDrawer();
         loadActivity();
         loadBottomSheet();
     }

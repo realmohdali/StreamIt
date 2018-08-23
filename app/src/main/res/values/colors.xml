@@ -9,4 +9,5 @@
     <color name="colorBlack">#000</color>
     <color name="colorGreen">#00ff00</color>
     <color name="newGray">#383838</color>
+    <color name="red">#fa0c0c</color>
 </resources>

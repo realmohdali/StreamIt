@@ -145,7 +145,6 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
 
         loadActivity();
         setUpToolbar();
-        setUpNavDrawer();
         handleSearch();
         loadBottomSheet();
     }
@@ -154,7 +153,7 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
     protected void onResume() {
         super.onResume();
         readData();
-
+        setUpNavDrawer();
         if (haveTrack) {
             addPadding = false;
             mediaPlayerUI.setVisibility(View.VISIBLE);
@@ -265,6 +264,9 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
         mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END);
         NavigationView navigationView = findViewById(R.id.nav_view);
         drawerOpen = false;
+        for (int i = 0; i < 3; i++) {
+            navigationView.getMenu().getItem(i).setChecked(false);
+        }
         navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
             @Override
             public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {

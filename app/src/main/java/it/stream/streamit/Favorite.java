@@ -136,7 +136,6 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
 
         mDrawerLayout = findViewById(R.id.drawer_layout);
         setUpToolbar();
-        setUpNavDrawer();
         loadActivity();
         loadBottomSheet();
     }
@@ -145,7 +144,7 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
     protected void onResume() {
         super.onResume();
         readData();
-
+        setUpNavDrawer();
         if (haveTrack) {
             mediaPlayerUI.setVisibility(View.VISIBLE);
             mRecyclerView.setPadding(0, 0, 0, marginInPx);

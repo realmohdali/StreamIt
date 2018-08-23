@@ -149,7 +149,6 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
 
         mDrawerLayout = findViewById(R.id.drawer_layout);
         setUpToolbar();
-        setUpNavDrawer();
         loadActivity();
         loadBottomSheet();
     }
@@ -158,7 +157,7 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
     protected void onResume() {
         super.onResume();
         readData();
-
+        setUpNavDrawer();
         if (haveTrack) {
             mediaPlayerUI.setVisibility(View.VISIBLE);
             LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) mViewPagerControl.getLayoutParams();
@@ -358,10 +357,12 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
         mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END);
         NavigationView navigationView = findViewById(R.id.nav_view);
         drawerOpen = false;
+        for (int i = 0; i < 3; i++) {
+            navigationView.getMenu().getItem(i).setChecked(false);
+        }
         navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
             @Override
             public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
-                menuItem.setChecked(true);
                 switch (menuItem.getItemId()) {
                     case R.id.homePage:
                         mDrawerLayout.closeDrawers();

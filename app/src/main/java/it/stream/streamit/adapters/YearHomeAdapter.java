@@ -47,12 +47,7 @@ public class YearHomeAdapter extends RecyclerView.Adapter<YearHomeAdapter.ViewHo
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder viewHolder, final int i) {
-        //viewHolder.t.setText(mYearList.get(i).getYear());
-        Glide.with(mContext)
-                .asBitmap()
-                .load(mYearList.get(i).getImageUrl())
-                .apply(bitmapTransform(new RoundedCornersTransformation(5, 0, RoundedCornersTransformation.CornerType.ALL)))
-                .into(viewHolder.iv);
+        viewHolder.t.setText(mYearList.get(i).getYear());
         viewHolder.item.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -74,17 +69,13 @@ public class YearHomeAdapter extends RecyclerView.Adapter<YearHomeAdapter.ViewHo
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        //TextView t;
-        ImageView iv;
-        //CardView cv;
+        TextView t;
         RelativeLayout item;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            //t = itemView.findViewById(R.id.title);
-            iv = itemView.findViewById(R.id.image);
+            t = itemView.findViewById(R.id.textYear);
             item = itemView.findViewById(R.id.item);
-            //cv = itemView.findViewById(R.id.cardView);
         }
     }
 }
