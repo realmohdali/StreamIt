@@ -24,6 +24,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
@@ -101,6 +102,9 @@ public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToR
     private int playerPosition;
     private LinearLayoutManager linearLayoutManager;
 
+    private int marginInPx;
+    private LinearLayout linearLayout;
+
     //______________________________________________________________________________________________
 
     //Activity lifecycle
@@ -120,6 +124,10 @@ public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToR
         mediaPlayerUI = findViewById(R.id.bottom_sheet);
         mediaPlayerUI.setVisibility(View.GONE);
 
+        float scale = getResources().getDisplayMetrics().density;
+        marginInPx = (int) (50 * scale + 0.5f);
+        linearLayout = findViewById(R.id.mainLayout);
+
         mDrawerLayout = findViewById(R.id.drawer_layout);
         setUpToolbar();
         loadActivity();
@@ -133,6 +141,9 @@ public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToR
         setUpNavDrawer();
         if (haveTrack) {
             mediaPlayerUI.setVisibility(View.VISIBLE);
+            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) linearLayout.getLayoutParams();
+            params.setMargins(0, 0, 0, marginInPx);
+            linearLayout.setLayoutParams(params);
             loadPlayer();
         }
     }
@@ -208,6 +219,10 @@ public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToR
         loopStatus = noLoop;
 
         trackUrl = "";
+
+        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) linearLayout.getLayoutParams();
+        params.setMargins(0, 0, 0, 0);
+        linearLayout.setLayoutParams(params);
     }
 
     private void setUpToolbar() {
@@ -493,7 +508,9 @@ public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToR
             readData();
 
             mediaPlayerUI.setVisibility(View.VISIBLE);
-
+            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) linearLayout.getLayoutParams();
+            params.setMargins(0, 0, 0, marginInPx);
+            linearLayout.setLayoutParams(params);
             loadPlayer();
             writeData();
 
@@ -590,7 +607,9 @@ public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToR
             duration = "00:00";
 
             serviceRunning = false;
-
+            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) linearLayout.getLayoutParams();
+            params.setMargins(0, 0, 0, 0);
+            linearLayout.setLayoutParams(params);
             writeData();
             loadPlayer();
 
