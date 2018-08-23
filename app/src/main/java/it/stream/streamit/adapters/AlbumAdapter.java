@@ -9,6 +9,7 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -25,12 +26,14 @@ import it.stream.streamit.backgroundService.MediaService;
 import jp.wasabeef.glide.transformations.RoundedCornersTransformation;
 
 import static com.bumptech.glide.request.RequestOptions.bitmapTransform;
+import static it.stream.streamit.backgroundService.MediaPlayerControllerConstants.ADD_TO_PLAYLIST;
 
 public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> {
 
     public static final String Broadcast_PLAY_NEW_AUDIO = "it.stream.streamit.PlayNewAudio";
     private Context mContext;
     private List<ListItem> mList;
+    private boolean serviceRunning;
 
     private String title, url, sub, img, artist, year;
 
@@ -49,12 +52,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> 
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder viewHolder, final int i) {
-
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
-        final boolean serviceRunning = sp.getBoolean("serviceRunning", false);
-
-
+    public void onBindViewHolder(@NonNull final ViewHolder viewHolder, int i) {
         viewHolder.a.setText(mList.get(i).getArtist());
         viewHolder.t.setText(mList.get(i).getTitle());
         viewHolder.y.setText(mList.get(i).getYear());
@@ -69,6 +67,9 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> 
             @Override
             public void onClick(View view) {
                 if (ConnectionCheck.isConnected(mContext)) {
+                    readData();
+
+                    int i = viewHolder.getAdapterPosition();
 
                     url = mList.get(i).getURL();
                     title = mList.get(i).getTitle();
@@ -95,6 +96,37 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> 
                 }
             }
         });
+
+        viewHolder.addToQ.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                readData();
+                int i = viewHolder.getAdapterPosition();
+                if (!serviceRunning) {
+                    Toast.makeText(mContext, "Media player is not running", Toast.LENGTH_SHORT).show();
+                } else {
+                    url = mList.get(i).getURL();
+                    title = mList.get(i).getTitle();
+                    sub = mList.get(i).getArtist();
+                    sub += " | ";
+                    sub += mList.get(i).getYear();
+                    img = mList.get(i).getImageUrl();
+                    year = mList.get(i).getYear();
+                    artist = mList.get(i).getArtist();
+
+                    Intent intent = new Intent(ADD_TO_PLAYLIST);
+                    intent.putExtra("url", url);
+                    intent.putExtra("title", title);
+                    intent.putExtra("sub", sub);
+                    intent.putExtra("img", img);
+                    intent.putExtra("year", year);
+                    intent.putExtra("artist", artist);
+                    mContext.sendBroadcast(intent);
+
+                    Toast.makeText(mContext, "Added to queue", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 
     @Override
@@ -114,6 +146,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> 
         ImageView iv;
         TextView t, a, y;
         LinearLayout item;
+        ImageButton addToQ, addToFav;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -123,6 +156,8 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> 
             a = itemView.findViewById(R.id.artist);
             y = itemView.findViewById(R.id.year);
             item = itemView.findViewById(R.id.albumItemView);
+            addToFav = itemView.findViewById(R.id.addToFav);
+            addToQ = itemView.findViewById(R.id.addToQueue);
 
         }
     }
@@ -137,5 +172,10 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> 
         editor.putString("year", year);
         editor.putString("media", url);
         editor.apply();
+    }
+
+    private void readData() {
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
+        serviceRunning = sp.getBoolean("serviceRunning", false);
     }
 }

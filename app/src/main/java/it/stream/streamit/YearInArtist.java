@@ -180,6 +180,7 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
         unregisterReceiver(resume);
         unregisterReceiver(resetPlayerUI);
         unregisterReceiver(seekUpdate);
+        unregisterReceiver(queueUpdate);
         writeData();
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor editor = sp.edit();
@@ -210,6 +211,7 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
         registerResume();
         registerResetPlayerUI();
         registerSeekUpdate();
+        registerQueueUpdate();
 
         //Bottom Sheet Stuff
         pb = findViewById(R.id.play);
@@ -543,6 +545,8 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
 
         sheetBehavior = BottomSheetBehavior.from(findViewById(R.id.bottom_sheet));
         expanded = false;
+        final LinearLayout mainPlayer = findViewById(R.id.audioPlayer);
+        final LinearLayout miniPlayer = findViewById(R.id.btmSheet);
 
         sheetBehavior.setBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
             @Override
@@ -559,7 +563,7 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
                         mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.START);
                         mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.END);
                         expanded = true;
-                        findViewById(R.id.btmSheet).setVisibility(View.GONE);
+                        miniPlayer.setVisibility(View.GONE);
                         break;
                     case BottomSheetBehavior.STATE_COLLAPSED:
                         setSupportActionBar(toolbar);
@@ -568,9 +572,11 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
                         mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.START);
                         mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END);
                         expanded = false;
+                        mainPlayer.setVisibility(View.GONE);
                         break;
                     case BottomSheetBehavior.STATE_DRAGGING:
-                        findViewById(R.id.btmSheet).setVisibility(View.VISIBLE);
+                        miniPlayer.setVisibility(View.VISIBLE);
+                        mainPlayer.setVisibility(View.VISIBLE);
                         break;
                     case BottomSheetBehavior.STATE_SETTLING:
                         break;
@@ -579,9 +585,11 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
 
             @Override
             public void onSlide(@NonNull View view, float v) {
-                findViewById(R.id.btmSheet).setVisibility(View.VISIBLE);
                 float x = 1 - v;
-                findViewById(R.id.btmSheet).setAlpha(x);
+                miniPlayer.setVisibility(View.VISIBLE);
+                miniPlayer.setAlpha(x);
+                mainPlayer.setVisibility(View.VISIBLE);
+                mainPlayer.setAlpha(v);
             }
         });
 
@@ -792,6 +800,19 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
         registerReceiver(seekUpdate, filter);
     }
 
+    private BroadcastReceiver queueUpdate = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            readData();
+            loadPlayer();
+        }
+    };
+
+    private void registerQueueUpdate() {
+        IntentFilter filter = new IntentFilter(PLAYLIST_UPDATE);
+        registerReceiver(queueUpdate, filter);
+    }
+
     //Broadcast Receivers end
     //______________________________________________________________________________________________
 
@@ -992,7 +1013,6 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
         editor.putString("duration", duration);
         editor.putInt("loop", loopStatus);
         editor.putBoolean("fav", isFav);
-        editor.putBoolean("serviceRunning", serviceRunning);
         editor.apply();
     }
 

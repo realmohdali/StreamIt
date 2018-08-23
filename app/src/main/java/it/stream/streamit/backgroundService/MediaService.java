@@ -49,7 +49,6 @@ import it.stream.streamit.R;
 import it.stream.streamit.database.RecentManagement;
 
 import static android.media.AudioManager.*;
-import static it.stream.streamit.adapters.RecentHomeAdapter.Broadcast_PLAY_NEW_AUDIO;
 import static it.stream.streamit.backgroundService.MediaPlayerControllerConstants.*;
 
 public class MediaService extends Service
@@ -193,6 +192,7 @@ public class MediaService extends Service
         registerStop();
         registerSeek();
         registerRemoveTrack();
+        registerAddToPlaylist();
 
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor editor = sp.edit();
@@ -220,6 +220,7 @@ public class MediaService extends Service
         unregisterReceiver(stop);
         unregisterReceiver(seek);
         unregisterReceiver(removeTrack);
+        unregisterReceiver(addToPlayList);
         telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_NONE);
 
         if (running) {
@@ -934,6 +935,47 @@ public class MediaService extends Service
         registerReceiver(removeTrack, filter);
     }
 
+    private BroadcastReceiver addToPlayList = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            String title, artist, img, mediaFile, year;
+            title = intent.getExtras().getString("title");
+            artist = intent.getExtras().getString("artist");
+            img = intent.getExtras().getString("img");
+            mediaFile = intent.getExtras().getString("url");
+            year = intent.getExtras().getString("year");
+
+            boolean exists = false;
+
+            for (int i = 0; i < mPlaylist.size(); i++) {
+                String url = mPlaylist.get(i).getURL();
+                if (url.equals(mediaFile)) {
+                    exists = true;
+                    break;
+                }
+            }
+
+            if (!exists) {
+                ListItem li = new ListItem(title, artist, img, mediaFile, year);
+                mPlaylist.add(li);
+
+                Gson gson = new Gson();
+                json = gson.toJson(mPlaylist);
+                writeData();
+            }
+
+            Intent intent1 = new Intent(PLAYLIST_UPDATE);
+            sendBroadcast(intent1);
+        }
+    };
+
+    private void registerAddToPlaylist() {
+        IntentFilter filter = new IntentFilter(ADD_TO_PLAYLIST);
+        registerReceiver(addToPlayList, filter);
+    }
+
+
     //Media player control receiver end
     //______________________________________________________________________________________________
 
@@ -966,6 +1008,7 @@ public class MediaService extends Service
         editor.putBoolean("haveTrack", haveTrack);
         editor.putInt("intDuration", duration);
         editor.putInt("playerPosition", playlistPosition);
+        editor.putBoolean("serviceRunning", true);
         editor.apply();
     }
 
