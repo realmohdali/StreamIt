@@ -29,7 +29,6 @@ import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.view.View;
 import android.widget.RemoteViews;
-import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -244,7 +243,7 @@ public class MediaService extends Service
                 if (mediaPlayer == null) initMediaPlayer();
                 else if (!mediaPlayer.isPlaying()) {
                     if (Playing_Before_call) {
-                        mediaPlayer.start();
+                        resumeMedia();
                     }
                 }
                 mediaPlayer.setVolume(1.0f, 1.0f);
@@ -301,6 +300,10 @@ public class MediaService extends Service
 
                 writeData();
 
+                ListItem li = new ListItem(title, artist, img, mediaFile, year);
+                RecentManagement addToRecent = new RecentManagement(recent);
+                addToRecent.add(li);
+
                 sendNewAudioBroadcast();
 
                 stopMedia();
@@ -321,6 +324,10 @@ public class MediaService extends Service
                 isLoading = true;
 
                 writeData();
+
+                ListItem li = new ListItem(title, artist, img, mediaFile, year);
+                RecentManagement addToRecent = new RecentManagement(recent);
+                addToRecent.add(li);
 
                 sendNewAudioBroadcast();
 
@@ -345,6 +352,10 @@ public class MediaService extends Service
                 isLoading = true;
 
                 writeData();
+
+                ListItem li = new ListItem(title, artist, img, mediaFile, year);
+                RecentManagement addToRecent = new RecentManagement(recent);
+                addToRecent.add(li);
 
                 sendNewAudioBroadcast();
 
@@ -800,6 +811,10 @@ public class MediaService extends Service
 
             writeData();
 
+            ListItem li = new ListItem(title, artist, img, mediaFile, year);
+            RecentManagement addToRecent = new RecentManagement(recent);
+            addToRecent.add(li);
+
             sendNewAudioBroadcast();
 
             stopMedia();
@@ -822,6 +837,10 @@ public class MediaService extends Service
             sub = st;
 
             writeData();
+
+            ListItem li = new ListItem(title, artist, img, mediaFile, year);
+            RecentManagement addToRecent = new RecentManagement(recent);
+            addToRecent.add(li);
 
             sendNewAudioBroadcast();
 
