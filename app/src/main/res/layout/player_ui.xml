@@ -4,7 +4,7 @@
     android:id="@+id/bottom_sheet"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/colorBlack"
+
     android:clickable="true"
     android:elevation="5dp"
     android:focusable="true"
@@ -30,7 +30,7 @@
             android:id="@+id/player_toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@android:color/transparent"
+            android:background="#33000000"
             android:elevation="6dp"
             android:theme="@style/toolbarTheme">
 
@@ -65,12 +65,12 @@
 
             <ImageView
                 android:id="@+id/albumArt"
-                android:layout_width="300dp"
-                android:layout_height="300dp"
+                android:layout_width="250dp"
+                android:layout_height="250dp"
                 android:layout_centerInParent="true"
                 android:layout_marginTop="50dp"
                 android:contentDescription="@string/album_art"
-                android:scaleType="centerInside"
+                android:scaleType="centerCrop"
                 android:src="@drawable/player_background" />
 
         </RelativeLayout>
@@ -78,7 +78,6 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="5dp"
             android:orientation="vertical">
 
             <SeekBar
@@ -91,7 +90,9 @@
                 android:id="@+id/timer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="#33000000"
                 android:orientation="horizontal"
+                android:paddingTop="2dp"
                 android:weightSum="2">
 
                 <TextView
@@ -126,8 +127,11 @@
                 android:id="@+id/controlBtn"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_below="@id/timer"
+                android:background="#33000000"
                 android:gravity="center"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:paddingBottom="5dp">
 
                 <ImageButton
                     android:id="@+id/fav"

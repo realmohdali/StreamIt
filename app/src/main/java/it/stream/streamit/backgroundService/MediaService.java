@@ -49,6 +49,7 @@ import it.stream.streamit.R;
 import it.stream.streamit.database.RecentManagement;
 
 import static android.media.AudioManager.*;
+import static it.stream.streamit.adapters.AlbumAdapter.Broadcast_PLAY_NEW_AUDIO;
 import static it.stream.streamit.backgroundService.MediaPlayerControllerConstants.*;
 
 public class MediaService extends Service
