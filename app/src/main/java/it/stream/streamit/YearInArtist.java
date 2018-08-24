@@ -285,7 +285,8 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
 
         final ViewPager viewPager = findViewById(R.id.pager);
 
-        final ArtistPagerAdapter pagerAdapter = new ArtistPagerAdapter(getSupportFragmentManager(), tabLayout.getTabCount(), getApplicationContext(), mList, artist);
+        SQLiteDatabase database = openOrCreateDatabase("favorite", MODE_PRIVATE, null);
+        final ArtistPagerAdapter pagerAdapter = new ArtistPagerAdapter(getSupportFragmentManager(), tabLayout.getTabCount(), getApplicationContext(), mList, artist, database);
 
         viewPager.setAdapter(pagerAdapter);
 

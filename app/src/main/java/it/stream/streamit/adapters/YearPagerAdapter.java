@@ -1,6 +1,7 @@
 package it.stream.streamit.adapters;
 
 import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
@@ -17,14 +18,15 @@ public class YearPagerAdapter extends FragmentStatePagerAdapter {
     private List<ArtistInYearList> mList;
     private String year;
     private Album_Tab_Fragment tab;
+    private SQLiteDatabase database;
 
-    public YearPagerAdapter(FragmentManager fm, int mNumOfTabs, Context context, List<ArtistInYearList> mList, String year) {
+    public YearPagerAdapter(FragmentManager fm, int mNumOfTabs, Context context, List<ArtistInYearList> mList, String year, SQLiteDatabase database) {
         super(fm);
         this.mNumOfTabs = mNumOfTabs;
         this.context = context;
         this.mList = mList;
         this.year = year;
-        this.tab = tab;
+        this.database = database;
     }
 
     @Override
@@ -33,6 +35,7 @@ public class YearPagerAdapter extends FragmentStatePagerAdapter {
         tab.setArtist(mList.get(i).getArtist());
         tab.setYear(year);
         tab.setContext(context);
+        tab.setDatabase(database);
         return tab;
     }
 

@@ -3,6 +3,7 @@ package it.stream.streamit.tabFragments;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -47,6 +48,7 @@ public class Album_Tab_Fragment extends Fragment {
     private RecyclerView.Adapter mAdapter;
     private List<ListItem> mList;
     private Button playAll;
+    private SQLiteDatabase database;
 
     private RelativeLayout mRelativeLayout;
 
@@ -66,6 +68,10 @@ public class Album_Tab_Fragment extends Fragment {
 
     public void setContext(Context context) {
         this.context = context;
+    }
+
+    public void setDatabase(SQLiteDatabase database) {
+        this.database = database;
     }
 
     @Nullable
@@ -171,7 +177,7 @@ public class Album_Tab_Fragment extends Fragment {
                                     mList.add(li);
                                 }
 
-                                mAdapter = new AlbumAdapter(context, mList);
+                                mAdapter = new AlbumAdapter(context, mList, database);
                                 mRecyclerView.setAdapter(mAdapter);
 
                             } catch (JSONException e) {

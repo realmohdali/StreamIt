@@ -294,8 +294,9 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         final ViewPager viewPager = findViewById(R.id.pager);
 
         final SQLiteDatabase recentDatabase = openOrCreateDatabase("recent", MODE_PRIVATE, null);
+        final SQLiteDatabase database = openOrCreateDatabase("favorite", MODE_PRIVATE, null);
 
-        final PagerAdapter pagerAdapter = new PagerAdapter(getSupportFragmentManager(), tabLayout.getTabCount(), getApplicationContext(), mActivity, recentDatabase);
+        final PagerAdapter pagerAdapter = new PagerAdapter(getSupportFragmentManager(), tabLayout.getTabCount(), getApplicationContext(), mActivity, recentDatabase, database);
 
         viewPager.setAdapter(pagerAdapter);
 

@@ -16,13 +16,15 @@ public class PagerAdapter extends FragmentStatePagerAdapter {
     private Context context;
     private Activity mActivity;
     private SQLiteDatabase database;
+    private SQLiteDatabase favDatabase;
 
-    public PagerAdapter(FragmentManager fm, int mNumOfTabs, Context context, Activity mActivity, SQLiteDatabase database) {
+    public PagerAdapter(FragmentManager fm, int mNumOfTabs, Context context, Activity mActivity, SQLiteDatabase database, SQLiteDatabase favDatabase) {
         super(fm);
         this.mNumOfTabs = mNumOfTabs;
         this.context = context;
         this.mActivity = mActivity;
         this.database = database;
+        this.favDatabase = favDatabase;
     }
 
     @Override
@@ -32,6 +34,7 @@ public class PagerAdapter extends FragmentStatePagerAdapter {
         tab.setContext(context);
         tab.setmActivity(mActivity);
         tab.setDatabase(database);
+        tab.setFavDatabase(favDatabase);
         return tab;
     }
 

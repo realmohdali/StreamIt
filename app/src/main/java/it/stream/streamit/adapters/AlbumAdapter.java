@@ -3,6 +3,7 @@ package it.stream.streamit.adapters;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.sqlite.SQLiteDatabase;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
@@ -23,6 +24,7 @@ import it.stream.streamit.database.ConnectionCheck;
 import it.stream.streamit.dataList.ListItem;
 import it.stream.streamit.R;
 import it.stream.streamit.backgroundService.MediaService;
+import it.stream.streamit.database.FavoriteManagement;
 import jp.wasabeef.glide.transformations.RoundedCornersTransformation;
 
 import static com.bumptech.glide.request.RequestOptions.bitmapTransform;
@@ -34,13 +36,14 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> 
     private Context mContext;
     private List<ListItem> mList;
     private boolean serviceRunning;
-
+    private SQLiteDatabase database;
     private String title, url, sub, img, artist, year;
 
 
-    public AlbumAdapter(Context mContext, List<ListItem> mList) {
+    public AlbumAdapter(Context mContext, List<ListItem> mList, SQLiteDatabase database) {
         this.mContext = mContext;
         this.mList = mList;
+        this.database = database;
     }
 
 
@@ -56,6 +59,12 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> 
         viewHolder.a.setText(mList.get(i).getArtist());
         viewHolder.t.setText(mList.get(i).getTitle());
         viewHolder.y.setText(mList.get(i).getYear());
+
+        if (isFav(mList.get(i).getURL())) {
+            viewHolder.addToFav.setImageResource(R.drawable.ic_favorite_green_24dp);
+        } else {
+            viewHolder.addToFav.setImageResource(R.drawable.ic_favorite_border_white_24dp);
+        }
 
         Glide.with(mContext)
                 .asBitmap()
@@ -127,6 +136,55 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> 
                 }
             }
         });
+
+        viewHolder.addToFav.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                boolean isFav = isFav(mList.get(viewHolder.getAdapterPosition()).getURL());
+
+                int i = viewHolder.getAdapterPosition();
+                url = mList.get(i).getURL();
+                title = mList.get(i).getTitle();
+                sub = mList.get(i).getArtist();
+                sub += " | ";
+                sub += mList.get(i).getYear();
+                img = mList.get(i).getImageUrl();
+                year = mList.get(i).getYear();
+                artist = mList.get(i).getArtist();
+                if (isFav) {
+                    FavoriteManagement favoriteManagement = new FavoriteManagement(title, url, img, sub, database, mContext);
+                    switch (favoriteManagement.removeFav()) {
+                        case FavoriteManagement.SUCCESS:
+                            viewHolder.addToFav.setImageResource(R.drawable.ic_favorite_border_white_24dp);
+                            Toast.makeText(mContext, "Removed from favorite", Toast.LENGTH_SHORT).show();
+                            break;
+                        case FavoriteManagement.ALREADY_EXISTS_OR_REMOVED:
+                            viewHolder.addToFav.setImageResource(R.drawable.ic_favorite_border_white_24dp);
+                            Toast.makeText(mContext, "This track does not exist in favorite", Toast.LENGTH_SHORT).show();
+                            break;
+                        case FavoriteManagement.ERROR:
+                            Toast.makeText(mContext, "Error in removing from favorite", Toast.LENGTH_SHORT).show();
+                            break;
+                    }
+                } else {
+                    FavoriteManagement favoriteManagement = new FavoriteManagement(title, url, img, sub, database, mContext);
+                    switch (favoriteManagement.addFav()) {
+                        case FavoriteManagement.SUCCESS:
+                            viewHolder.addToFav.setImageResource(R.drawable.ic_favorite_green_24dp);
+                            Toast.makeText(mContext, "Added to favorite", Toast.LENGTH_SHORT).show();
+                            break;
+                        case FavoriteManagement.ALREADY_EXISTS_OR_REMOVED:
+                            viewHolder.addToFav.setImageResource(R.drawable.ic_favorite_green_24dp);
+                            Toast.makeText(mContext, "This track is already exist in favorite", Toast.LENGTH_SHORT).show();
+                            break;
+                        case FavoriteManagement.ERROR:
+                            Toast.makeText(mContext, "Error in adding to favorite", Toast.LENGTH_SHORT).show();
+                            break;
+                    }
+                }
+            }
+        });
+
     }
 
     @Override
@@ -177,5 +235,10 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> 
     private void readData() {
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
         serviceRunning = sp.getBoolean("serviceRunning", false);
+    }
+
+    private boolean isFav(String url) {
+        FavoriteManagement favoriteManagement = new FavoriteManagement(url, database);
+        return favoriteManagement.alreadyExists();
     }
 }

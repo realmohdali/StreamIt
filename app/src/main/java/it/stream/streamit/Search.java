@@ -559,7 +559,9 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
             noResultLayout.setVisibility(View.GONE);
             mRecyclerView.setVisibility(View.VISIBLE);
 
-            RecyclerView.Adapter mAdapter = new AlbumAdapter(getApplicationContext(), mList);
+            SQLiteDatabase database = openOrCreateDatabase("favorite", MODE_PRIVATE, null);
+
+            RecyclerView.Adapter mAdapter = new AlbumAdapter(getApplicationContext(), mList, database);
             mRecyclerView.setAdapter(mAdapter);
         } else {
             mRecyclerView.setVisibility(View.GONE);

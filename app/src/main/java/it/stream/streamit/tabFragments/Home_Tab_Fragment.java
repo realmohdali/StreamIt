@@ -46,6 +46,12 @@ public class Home_Tab_Fragment extends Fragment {
     private RecyclerView mRecyclerView;
     private RecyclerView.Adapter mAdapter;
     private SQLiteDatabase database;
+    private SQLiteDatabase favDatabase;
+
+    public void setFavDatabase(SQLiteDatabase favDatabase) {
+        this.favDatabase = favDatabase;
+    }
+
     private SwipeRefreshLayout refreshLayout;
 
     private RelativeLayout mRelativeLayout;
@@ -135,7 +141,7 @@ public class Home_Tab_Fragment extends Fragment {
         }
         mRelativeLayout.setVisibility(View.GONE);
         mRecyclerView.setVisibility(View.VISIBLE);
-        mAdapter = new AlbumAdapter(context, mListItems);
+        mAdapter = new AlbumAdapter(context, mListItems, favDatabase);
         mRecyclerView.setAdapter(mAdapter);
         refreshLayout.setRefreshing(false);
     }
