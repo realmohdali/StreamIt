@@ -522,7 +522,7 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
                         Toolbar playerToolbar = findViewById(R.id.player_toolbar);
                         setSupportActionBar(playerToolbar);
                         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-                        getSupportActionBar().setDisplayShowHomeEnabled(true);
+                        getSupportActionBar().setHomeAsUpIndicator(R.drawable.ic_keyboard_arrow_down);
                         getSupportActionBar().setTitle(R.string.playerTitle);
                         mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.START);
                         mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.END);
