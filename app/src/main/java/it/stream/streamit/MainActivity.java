@@ -1,6 +1,7 @@
 package it.stream.streamit;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -30,9 +31,8 @@ import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -47,7 +47,6 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
-import java.security.Principal;
 import java.util.List;
 
 import it.stream.streamit.adapters.PagerAdapter;
@@ -75,7 +74,9 @@ import static it.stream.streamit.backgroundService.MediaService.New_Audio;
 import static it.stream.streamit.backgroundService.MediaService.buffering_End;
 import static it.stream.streamit.database.LoadServerData.DATA_LOADED;
 
+
 public class MainActivity extends AppCompatActivity implements RemoveQueueItem.SwipeToRemoveListener {
+
 
     private Toolbar toolbar;
     private DrawerLayout mDrawerLayout;
@@ -133,6 +134,8 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
     private QueueAdapter adapter;
     private int playerPosition;
     private LinearLayoutManager linearLayoutManager;
+
+    float x, y, x1, y1;
 
     //______________________________________________________________________________________________
 
@@ -274,7 +277,6 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) mViewPagerControl.getLayoutParams();
         params.setMargins(0, 0, 0, 0);
         mViewPagerControl.setLayoutParams(params);
-
     }
 
     private void setUpToolbar() {
@@ -819,6 +821,7 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         }
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private void loadPlayer() {
         if (isLoading) {
             ct.setText(trackTitle);
@@ -952,6 +955,36 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         }
 
         relativeLayout.setVisibility(View.GONE);
+
+        //Swipe to change track
+        final int min_distance = 50;
+        iv3.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+                switch (motionEvent.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        x = motionEvent.getX();
+                        y = motionEvent.getY();
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                        x1 = motionEvent.getX();
+                        y1 = motionEvent.getY();
+
+                        if (y - y1 < min_distance) {
+                            if (x > x1 && (x - x1 > min_distance)) {
+                                Intent intent = new Intent(ACTION_NEXT);
+                                sendBroadcast(intent);
+                            } else if (x1 > x && (x1 - x > min_distance)) {
+                                Intent intent = new Intent(ACTION_PREV);
+                                sendBroadcast(intent);
+                            }
+                        }
+
+                        return true;
+                }
+                return false;
+            }
+        });
     }
 
     //Loading and controlling media player Done
@@ -1133,6 +1166,8 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         }
     }
 
+    //Check for permission end
+
     @Override
     public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction, int position) {
         if (viewHolder instanceof QueueAdapter.ViewHolder) {
@@ -1141,6 +1176,4 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
             }
         }
     }
-
-    //Check for permission end
 }

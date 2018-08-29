@@ -1,5 +1,6 @@
 package it.stream.streamit;
 
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -23,6 +24,7 @@ import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -123,6 +125,8 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
     private QueueAdapter adapter;
     private int playerPosition;
     private LinearLayoutManager linearLayoutManager;
+
+    float x, y, x1, y1;
 
     //______________________________________________________________________________________________
 
@@ -839,6 +843,7 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
         }
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private void loadPlayer() {
         if (isLoading) {
             ct.setText(trackTitle);
@@ -972,6 +977,36 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
         }
 
         relativeLayout.setVisibility(View.GONE);
+
+        //Swipe to change track
+        final int min_distance = 50;
+        iv3.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+                switch (motionEvent.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        x = motionEvent.getX();
+                        y = motionEvent.getY();
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                        x1 = motionEvent.getX();
+                        y1 = motionEvent.getY();
+
+                        if (y - y1 < min_distance) {
+                            if (x > x1 && (x - x1 > min_distance)) {
+                                Intent intent = new Intent(ACTION_NEXT);
+                                sendBroadcast(intent);
+                            } else if (x1 > x && (x1 - x > min_distance)) {
+                                Intent intent = new Intent(ACTION_PREV);
+                                sendBroadcast(intent);
+                            }
+                        }
+
+                        return true;
+                }
+                return false;
+            }
+        });
     }
 
     //Loading and controlling media player Done
