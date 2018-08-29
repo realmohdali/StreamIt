@@ -789,7 +789,7 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
             Glide.with(this)
                     .asBitmap()
                     .load(trackImg)
-                    .apply(bitmapTransform(new BlurTransformation(10, 3)))
+                    .apply(bitmapTransform(new BlurTransformation(25, 3)))
                     .into(iv3);
 
             pb.setVisibility(View.GONE);

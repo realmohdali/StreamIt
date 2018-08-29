@@ -732,7 +732,7 @@ public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToR
             Glide.with(this)
                     .asBitmap()
                     .load(trackImg)
-                    .apply(bitmapTransform(new BlurTransformation(10, 3)))
+                    .apply(bitmapTransform(new BlurTransformation(25, 3)))
                     .into(iv3);
 
             pb.setVisibility(View.GONE);
