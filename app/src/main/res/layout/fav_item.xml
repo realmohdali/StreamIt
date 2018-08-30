@@ -48,7 +48,8 @@
             android:src="@drawable/ic_launcher_background" />
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginLeft="5dp"
             android:orientation="vertical">
@@ -57,7 +58,6 @@
                 android:id="@+id/title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:autoSizeTextType="uniform"
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:text="Title of the Track"
@@ -69,7 +69,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
-                android:autoSizeTextType="uniform"
                 android:text="ArtistName"
                 android:textColor="@color/colorWhite" />
 
@@ -77,11 +76,29 @@
                 android:id="@+id/year"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:autoSizeTextType="uniform"
                 android:text="year"
                 android:textColor="@color/colorWhite" />
 
         </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="end"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/addToQueue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+
+                android:background="@android:color/transparent"
+                android:padding="10dp"
+                android:src="@drawable/ic_playlist_add" />
+
+        </LinearLayout>
+
     </LinearLayout>
 
 </FrameLayout>

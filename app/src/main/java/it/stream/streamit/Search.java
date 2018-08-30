@@ -896,7 +896,7 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
                 Glide.with(this)
                         .asBitmap()
                         .load(trackImg)
-                        .apply(bitmapTransform(new BlurTransformation(10, 3)))
+                        .apply(bitmapTransform(new BlurTransformation(25, 3)))
                         .into(iv3);
                 mProgressBar.setMax(intDuration);
 
@@ -942,7 +942,7 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
         if (isLoading) {
             adapter.update("loading", playerPosition);
             linearLayoutManager.scrollToPosition(playerPosition);
-        } else if (playing) {
+        } else {
             adapter.update("playing", playerPosition);
             linearLayoutManager.scrollToPosition(playerPosition);
         }

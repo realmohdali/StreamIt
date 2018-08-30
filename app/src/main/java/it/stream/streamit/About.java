@@ -794,7 +794,7 @@ public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToR
                 Glide.with(this)
                         .asBitmap()
                         .load(trackImg)
-                        .apply(bitmapTransform(new BlurTransformation(10, 3)))
+                        .apply(bitmapTransform(new BlurTransformation(25, 3)))
                         .into(iv3);
                 mProgressBar.setMax(intDuration);
 
@@ -840,7 +840,7 @@ public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToR
         if (isLoading) {
             qAdapter.update("loading", playerPosition);
             linearLayoutManager.scrollToPosition(playerPosition);
-        } else if (playing) {
+        } else {
             qAdapter.update("playing", playerPosition);
             linearLayoutManager.scrollToPosition(playerPosition);
         }

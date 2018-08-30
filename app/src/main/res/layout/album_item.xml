@@ -39,7 +39,6 @@
                     android:id="@+id/title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:autoSizeTextType="uniform"
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:text="Title of the Track"
@@ -51,7 +50,6 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="5dp"
-                    android:autoSizeTextType="uniform"
                     android:text="ArtistName"
                     android:textColor="@color/colorWhite" />
 
@@ -59,7 +57,6 @@
                     android:id="@+id/year"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:autoSizeTextType="uniform"
                     android:text="year"
                     android:textColor="@color/colorWhite" />
 
