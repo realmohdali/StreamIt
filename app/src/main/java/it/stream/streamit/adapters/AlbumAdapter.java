@@ -152,7 +152,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> 
                 year = mList.get(i).getYear();
                 artist = mList.get(i).getArtist();
                 if (isFav) {
-                    FavoriteManagement favoriteManagement = new FavoriteManagement(title, url, img, sub, database, mContext);
+                    FavoriteManagement favoriteManagement = new FavoriteManagement(title, url, img, artist, year, database, mContext);
                     switch (favoriteManagement.removeFav()) {
                         case FavoriteManagement.SUCCESS:
                             viewHolder.addToFav.setImageResource(R.drawable.ic_favorite_border_white_24dp);
@@ -167,7 +167,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> 
                             break;
                     }
                 } else {
-                    FavoriteManagement favoriteManagement = new FavoriteManagement(title, url, img, sub, database, mContext);
+                    FavoriteManagement favoriteManagement = new FavoriteManagement(title, url, img, artist, year, database, mContext);
                     switch (favoriteManagement.addFav()) {
                         case FavoriteManagement.SUCCESS:
                             viewHolder.addToFav.setImageResource(R.drawable.ic_favorite_green_24dp);

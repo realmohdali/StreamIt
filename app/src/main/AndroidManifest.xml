@@ -55,6 +55,11 @@
         <activity
             android:name=".About"
             android:screenOrientation="nosensor"
+            android:theme="@style/tabTheme" />
+
+        <activity
+            android:name=".Offline"
+            android:screenOrientation="nosensor"
             android:theme="@style/tabTheme"></activity>
     </application>
 

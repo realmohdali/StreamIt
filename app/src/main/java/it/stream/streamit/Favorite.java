@@ -122,6 +122,8 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
 
     float x, y, x1, y1;
 
+    String trackArtist, trackYear;
+
     //______________________________________________________________________________________________
 
     //Activity lifecycle
@@ -428,7 +430,7 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
             public void onClick(View view) {
                 if (haveTrack) {
                     if (isFav) {
-                        FavoriteManagement favoriteManagement = new FavoriteManagement(trackTitle, trackUrl, trackImg, trackSub, db, getApplicationContext());
+                        FavoriteManagement favoriteManagement = new FavoriteManagement(trackTitle, trackUrl, trackImg, trackArtist, trackYear, db, getApplicationContext());
                         switch (favoriteManagement.removeFav()) {
                             case FavoriteManagement.SUCCESS:
                                 fav.setImageResource(R.drawable.ic_favorite_border_white_24dp);
@@ -445,7 +447,7 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
                                 break;
                         }
                     } else {
-                        FavoriteManagement favoriteManagement = new FavoriteManagement(trackTitle, trackUrl, trackImg, trackSub, db, getApplicationContext());
+                        FavoriteManagement favoriteManagement = new FavoriteManagement(trackTitle, trackUrl, trackImg, trackArtist, trackYear, db, getApplicationContext());
                         switch (favoriteManagement.addFav()) {
                             case FavoriteManagement.SUCCESS:
                                 fav.setImageResource(R.drawable.ic_favorite_green_24dp);
@@ -958,6 +960,8 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
         isFav = preferences.getBoolean("fav", false);
         serviceRunning = preferences.getBoolean("serviceRunning", false);
         playerPosition = preferences.getInt("playerPosition", -1);
+        trackArtist = preferences.getString("artist", "");
+        trackYear = preferences.getString("year", "");
     }
 
     private void writeData() {

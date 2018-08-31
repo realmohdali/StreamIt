@@ -168,12 +168,13 @@ public class FavAdapter extends RecyclerView.Adapter<FavAdapter.ViewHolder> {
     }
 
     public void removeItem(int i, SQLiteDatabase database) {
-        String trackTitle, trackUrl, trackImg, trackSub;
+        String trackTitle, trackUrl, trackImg, trackArtist, trackYear;
         trackTitle = mList.get(i).getTitle();
         trackImg = mList.get(i).getImageUrl();
-        trackSub = mList.get(i).getArtist();
+        trackArtist = mList.get(i).getArtist();
+        trackYear = mList.get(i).getYear();
         trackUrl = mList.get(i).getURL();
-        FavoriteManagement favoriteManagement = new FavoriteManagement(trackTitle, trackUrl, trackImg, trackSub, database, mContext);
+        FavoriteManagement favoriteManagement = new FavoriteManagement(trackTitle, trackUrl, trackImg, trackArtist, trackYear, database, mContext);
         switch (favoriteManagement.removeFav()) {
             case FavoriteManagement.SUCCESS:
                 Toast.makeText(mContext, "Removed from favorite", Toast.LENGTH_SHORT).show();
