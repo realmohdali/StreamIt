@@ -45,7 +45,20 @@
     <string name="artist_2018">Artist | 2018</string>
     <string name="about_app">
         Matam is a non profit app developed to honor the greatest sacrifice of Imam Hussain (A.s)
-        and to spreading the message of Imam Hussain (A.s) through Noha.
+        and to spread the message of Imam Hussain (A.s) and the message of karbala through Noha.
+    </string>
+    <string name="about_app2">
+        As we are surrounding our self with more and more technological advancements, at the same
+        time we must not forget about the sacrifice presented by Imam Hussain (A.s) for Humanity,
+        and keeping the same in view, we at \'Re-Imagin Technology\' ventured out to create this app,
+        which, while utilizing the tools of technology, is providing the user with experience of
+        knowing about Karbala, and Imam Hussain (A.s) and 72 Shoda-e-Karbala.
+    </string>
+    <string name="about_app3">
+        Our goal behind creating this app is to present a meaningful narrative of the events of
+        Karbala, as happened 1400 years ago. As we found out there is no better way to present the
+        narrative than using \'Kalam\' of \'Shora-e-Ahl-e-baite\' and soulful voices of Nauha-khuwan
+        Hazrat, such as Janab Nadeem Sarwar, Janab Irfan Haider and many more.
     </string>
 
 </resources>
