@@ -161,6 +161,11 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
             mRecyclerView.setPadding(0, 0, 0, marginInPx);
             loadPlayer();
         }
+
+        if (!ConnectionCheck.isConnected(this)) {
+            Intent intent = new Intent(this, Offline.class);
+            startActivity(intent);
+        }
     }
 
     @Override

@@ -44,6 +44,7 @@ import it.stream.streamit.adapters.QueueAdapter;
 import it.stream.streamit.adapters.RemoveQueueItem;
 import it.stream.streamit.backgroundService.MediaService;
 import it.stream.streamit.dataList.ListItem;
+import it.stream.streamit.database.ConnectionCheck;
 import it.stream.streamit.database.FavoriteManagement;
 import jp.wasabeef.glide.transformations.BlurTransformation;
 
@@ -152,6 +153,11 @@ public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToR
             params.setMargins(0, 0, 0, marginInPx);
             linearLayout.setLayoutParams(params);
             loadPlayer();
+        }
+
+        if (!ConnectionCheck.isConnected(this)) {
+            Intent intent = new Intent(this, Offline.class);
+            startActivity(intent);
         }
     }
 

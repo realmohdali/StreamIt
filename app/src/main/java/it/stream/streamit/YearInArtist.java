@@ -61,6 +61,7 @@ import it.stream.streamit.adapters.RemoveQueueItem;
 import it.stream.streamit.backgroundService.MediaService;
 import it.stream.streamit.dataList.ListItem;
 import it.stream.streamit.dataList.YearInArtistList;
+import it.stream.streamit.database.ConnectionCheck;
 import it.stream.streamit.database.FavoriteManagement;
 import jp.wasabeef.glide.transformations.BlurTransformation;
 
@@ -172,6 +173,11 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
             params.setMargins(0, 0, 0, marginInPx);
             mViewPagerControl.setLayoutParams(params);
             loadPlayer();
+        }
+
+        if (!ConnectionCheck.isConnected(this)) {
+            Intent intent = new Intent(this, Offline.class);
+            startActivity(intent);
         }
     }
 

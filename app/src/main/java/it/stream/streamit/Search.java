@@ -52,6 +52,7 @@ import it.stream.streamit.adapters.QueueAdapter;
 import it.stream.streamit.adapters.RemoveQueueItem;
 import it.stream.streamit.backgroundService.MediaService;
 import it.stream.streamit.dataList.ListItem;
+import it.stream.streamit.database.ConnectionCheck;
 import it.stream.streamit.database.FavoriteManagement;
 import it.stream.streamit.database.RetrieveSearchedData;
 import jp.wasabeef.glide.transformations.BlurTransformation;
@@ -168,6 +169,11 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
             mediaPlayerUI.setVisibility(View.VISIBLE);
             linearLayout.setPadding(0, 0, 0, marginInPx);
             loadPlayer();
+        }
+
+        if (!ConnectionCheck.isConnected(this)) {
+            Intent intent = new Intent(this, Offline.class);
+            startActivity(intent);
         }
     }
 

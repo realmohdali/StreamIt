@@ -162,6 +162,9 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         if (ConnectionCheck.isConnected(this)) {
             LoadServerData loadServerData = new LoadServerData(search, getApplicationContext());
             loadServerData.loadData();
+        } else {
+            Intent intent = new Intent(this, Offline.class);
+            startActivity(intent);
         }
         loadEverything();
     }
@@ -177,6 +180,11 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
             params.setMargins(0, 0, 0, marginInPx);
             mViewPagerControl.setLayoutParams(params);
             loadPlayer();
+        }
+
+        if (!ConnectionCheck.isConnected(this)) {
+            Intent intent = new Intent(this, Offline.class);
+            startActivity(intent);
         }
     }
 
