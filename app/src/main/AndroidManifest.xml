@@ -5,19 +5,20 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher_new"
         android:label="@string/app_name"
+        android:resizeableActivity="false"
         android:roundIcon="@mipmap/ic_launcher_new_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-
         <activity
             android:name=".MainActivity"
-            android:launchMode="singleTop"
-            android:screenOrientation="nosensor">
+            android:screenOrientation="nosensor"
+            android:theme="@style/tabTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -25,45 +26,41 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".WhatsNew"
-            android:label="@string/whatNew"
-            android:parentActivityName=".MainActivity"
-            android:screenOrientation="nosensor">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="it.stream.streamit.MainActivity" />
-        </activity>
-        <activity
-            android:name=".Artists"
-            android:label="@string/artist"
-            android:parentActivityName=".MainActivity"
-            android:screenOrientation="nosensor">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="it.stream.streamit.MainActivity" />
-        </activity>
-        <activity
-            android:name=".Years"
-            android:label="@string/years"
-            android:parentActivityName=".MainActivity"
-            android:screenOrientation="nosensor">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="it.stream.streamit.MainActivity" />
-        </activity>
-        <activity
             android:name=".YearInArtist"
-            android:screenOrientation="nosensor" />
+            android:screenOrientation="nosensor"
+            android:theme="@style/tabTheme" />
         <activity
             android:name=".ArtistInYear"
-            android:screenOrientation="nosensor" />
-        <activity android:name=".Album"
-            android:screenOrientation="nosensor"/>
+            android:screenOrientation="nosensor"
+            android:theme="@style/tabTheme" />
+        <activity
+            android:name=".Favorite"
+            android:screenOrientation="nosensor"
+            android:theme="@style/tabTheme" />
+        <activity
+            android:name=".Search"
+            android:screenOrientation="nosensor"
+            android:theme="@style/tabTheme"
+            android:windowSoftInputMode="stateAlwaysVisible" />
 
-        <service
-            android:name=".MediaPlayerService"
-            android:stopWithTask="false" />
+        <service android:name=".backgroundService.MediaService" />
 
+        <receiver android:name="android.support.v4.media.session.MediaButtonReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+                <action android:name="android.media.AUDIO_BECOMING_NOISY" />
+            </intent-filter>
+        </receiver>
+
+        <activity
+            android:name=".About"
+            android:screenOrientation="nosensor"
+            android:theme="@style/tabTheme" />
+
+        <activity
+            android:name=".Offline"
+            android:screenOrientation="nosensor"
+            android:theme="@style/tabTheme"></activity>
     </application>
 
 </manifest>

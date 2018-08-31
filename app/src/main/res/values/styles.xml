@@ -7,12 +7,51 @@
         <item name="colorAccent">@color/colorGreen</item>
         <item name="materialCardViewStyle">@style/CardView.Dark</item>
     </style>
+
     <style name="AppTheme" parent="Base.Theme.AppCompat.Light.DarkActionBar">
         <!-- Customize your theme here. -->
         <item name="colorPrimary">@color/colorBlack</item>
         <item name="colorPrimaryDark">@color/colorBlack</item>
         <item name="colorAccent">@color/colorGreen</item>
         <item name="cardViewStyle">@style/CardView</item>
+    </style>
+
+    <style name="toolbarTheme" parent="ThemeOverlay.AppCompat.ActionBar">
+        <item name="colorPrimary">@color/colorBlack</item>
+        <item name="android:textColorPrimary">@color/colorWhite</item>
+        <item name="android:textColorPrimaryInverse">@color/colorWhite</item>
+        <item name="android:textColorSecondary">@color/colorWhite</item>
+        <item name="colorPrimaryDark">@color/colorBlack</item>
+        <item name="colorAccent">@color/colorGreen</item>
+        <item name="materialCardViewStyle">@style/CardView.Dark</item>
+    </style>
+
+    <style name="tabViewTheme" parent="ThemeOverlay.AppCompat.ActionBar">
+        <item name="colorPrimary">@color/colorBlack</item>
+        <item name="android:textColorPrimary">@color/colorGreen</item>
+        <item name="android:textColorPrimaryInverse">@color/colorGreen</item>
+        <item name="android:textColorSecondary">@color/colorWhite</item>
+        <item name="colorPrimaryDark">@color/colorBlack</item>
+        <item name="colorAccent">@color/colorGreen</item>
+        <item name="materialCardViewStyle">@style/CardView.Dark</item>
+    </style>
+
+    <style name="drawerTheme" parent="ThemeOverlay.AppCompat.ActionBar">
+        <item name="colorPrimary">@color/colorGreen</item>
+        <item name="android:textColorPrimary">@color/colorWhite</item>
+        <item name="android:textColorPrimaryInverse">@color/colorWhite</item>
+        <item name="android:textColorSecondary">@color/colorWhite</item>
+        <item name="colorPrimaryDark">@color/colorBlack</item>
+        <item name="colorAccent">@color/colorGreen</item>
+        <item name="materialCardViewStyle">@style/CardView.Dark</item>
+        <item name="android:listDivider">@color/newGray</item>
+    </style>
+
+    <style name="tabTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">@color/colorBlack</item>
+        <item name="colorPrimaryDark">@color/colorBlack</item>
+        <item name="colorAccent">@color/colorGreen</item>
+        <item name="materialCardViewStyle">@style/CardView.Dark</item>
     </style>
 
 </resources>

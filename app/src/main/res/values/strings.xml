@@ -2,8 +2,63 @@
     <string name="app_name">Matam</string>
     <string name="whatNew">Recently Added</string>
     <string name="more">MORE</string>
-    <string name="artist">Artists</string>
+    <string name="artist">Noha Khuwan</string>
     <string name="year">Year</string>
     <string name="years">Years</string>
     <string name="playerTitle">Media Player</string>
+    <string name="search">Search</string>
+    <string name="queue">Queue</string>
+    <string name="home">Home</string>
+    <string name="favorite">Favorite</string>
+    <string name="settings">Settings</string>
+    <string name="about">About</string>
+
+    <string name="tabRecent">RECENT</string>
+    <string name="tabArtist">NOHA KHUWAN</string>
+    <string name="tabYear">YEARS</string>
+    <string name="app_subtitle">Labbaik Ya Husain (A.S.)</string>
+
+    <string name="start_search">Search for Matam</string>
+    <string name="no_result">No result were found</string>
+
+    <string name="no_fav">You have not added anything to Favorite</string>
+
+    <string name="offline">You are not connected to Internet. Enable WIFI/MobileData and try again.</string>
+
+    <string name="notification_channel_id">Matam_Notification_Channel</string>
+    <string name="notification_channel_name">Matam_Notification</string>
+    <string name="notification_channel_description">Labbaik Ya Hussain</string>
+
+    <string name="stop">Stop</string>
+    <string name="next">Next</string>
+    <string name="prev">Prev</string>
+
+    <string name="remove">Remove</string>
+    <string name="play_all">Play All</string>
+    <string name="available_nohe">Available Nohe :</string>
+    <string name="player_background">Player Background</string>
+    <string name="title_of_the_track">Title of the Track</string>
+    <string name="album_art">Album Art</string>
+    <string name="_00_00">00:00</string>
+    <string name="repeat">Repeat</string>
+    <string name="title_of_track">Title of Track</string>
+    <string name="artist_2018">Artist | 2018</string>
+    <string name="about_app">
+        Matam is a non profit app developed to honor the greatest sacrifice of Imam Hussain (A.s)
+        and to spread the message of Imam Hussain (A.s) and the message of karbala through Noha.
+    </string>
+    <string name="about_app2">
+        As we are surrounding our self with more and more technological advancements, at the same
+        time we must not forget about the sacrifice presented by Imam Hussain (A.s) for Humanity,
+        and keeping the same in view, we at \'Re-Imagin Technology\' ventured out to create this app,
+        which, while utilizing the tools of technology, is providing the user with experience of
+        knowing about Karbala, and Imam Hussain (A.s) and 72 Shoda-e-Karbala.
+    </string>
+    <string name="about_app3">
+        Our goal behind creating this app is to present a meaningful narrative of the events of
+        Karbala, as happened 1400 years ago. As we found out there is no better way to present the
+        narrative than using \'Kalam\' of \'Shora-e-Ahl-e-baite\' and soulful voices of Nauha-khuwan
+        Hazrat, such as Janab Nadeem Sarwar, Janab Irfan Haider and many more.
+    </string>
+
 </resources>
