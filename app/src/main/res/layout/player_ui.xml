@@ -71,6 +71,7 @@
                 android:layout_centerInParent="true"
                 android:layout_marginTop="50dp"
                 android:contentDescription="@string/album_art"
+                android:elevation="25dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/player_background" />
 

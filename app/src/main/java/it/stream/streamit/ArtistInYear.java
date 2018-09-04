@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.os.Build;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
@@ -417,6 +418,13 @@ public class ArtistInYear extends AppCompatActivity implements RemoveQueueItem.S
                         Intent intent2 = new Intent(getApplicationContext(), About.class);
                         startActivity(intent2);
                         overridePendingTransition(0, 0);
+                        return true;
+                    case R.id.feedback:
+                        mDrawerLayout.closeDrawers();
+                        Intent openPlayStore = new Intent(Intent.ACTION_VIEW);
+                        openPlayStore.setData(Uri.parse("https://play.google.com/store/apps/details?id=it.stream.streamit"));
+                        openPlayStore.setPackage("com.android.vending");
+                        startActivity(openPlayStore);
                         return true;
                     default:
                         mDrawerLayout.closeDrawers();

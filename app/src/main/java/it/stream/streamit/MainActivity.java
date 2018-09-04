@@ -10,6 +10,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.preference.PreferenceManager;
@@ -43,6 +44,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -146,6 +148,8 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        FirebaseMessaging.getInstance().subscribeToTopic("all");
 
         registerSearchDataLoaded();
 
@@ -363,6 +367,13 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
                         } else {
                             Toast.makeText(getApplicationContext(), R.string.offline, Toast.LENGTH_SHORT).show();
                         }
+                        return true;
+                    case R.id.feedback:
+                        mDrawerLayout.closeDrawers();
+                        Intent openPlayStore = new Intent(Intent.ACTION_VIEW);
+                        openPlayStore.setData(Uri.parse("https://play.google.com/store/apps/details?id=it.stream.streamit"));
+                        openPlayStore.setPackage("com.android.vending");
+                        startActivity(openPlayStore);
                         return true;
                     default:
                         mDrawerLayout.closeDrawers();
