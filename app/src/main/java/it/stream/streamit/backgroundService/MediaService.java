@@ -230,6 +230,12 @@ public class MediaService extends Service
         clearData();
     }
 
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        super.onTaskRemoved(rootIntent);
+        stopSelf();
+    }
+
     //Lifecycle methods end
     //______________________________________________________________________________________________
 

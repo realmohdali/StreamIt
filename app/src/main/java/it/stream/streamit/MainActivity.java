@@ -131,8 +131,6 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
 
     private int marginInPx;
 
-    private boolean killed = true;
-
     private QueueAdapter adapter;
     private int playerPosition;
     private LinearLayoutManager linearLayoutManager;
@@ -149,17 +147,11 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        clearData();
+
         FirebaseMessaging.getInstance().subscribeToTopic("all");
 
         registerSearchDataLoaded();
-
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-        killed = sp.getBoolean("killed", true);
-        if (killed) {
-            clearData();
-        } else {
-            killed = true;
-        }
 
         SQLiteDatabase search = openOrCreateDatabase("search", MODE_PRIVATE, null);
 
@@ -205,10 +197,6 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         unregisterReceiver(seekUpdate);
         unregisterReceiver(searchDataLoaded);
         unregisterReceiver(queueUpdate);
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-        SharedPreferences.Editor editor = sp.edit();
-        editor.putBoolean("killed", false);
-        editor.apply();
         super.onDestroy();
     }
 
@@ -303,6 +291,7 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
     private void setUpTabs() {
         TabLayout tabLayout = findViewById(R.id.tab_layout);
         tabLayout.addTab(tabLayout.newTab().setText(R.string.tabRecent));
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.tabNew));
         tabLayout.addTab(tabLayout.newTab().setText(R.string.tabArtist));
         tabLayout.addTab(tabLayout.newTab().setText(R.string.tabYear));
         tabLayout.setTabGravity(TabLayout.GRAVITY_FILL);

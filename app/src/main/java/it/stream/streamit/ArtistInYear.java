@@ -146,11 +146,6 @@ public class ArtistInYear extends AppCompatActivity implements RemoveQueueItem.S
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_artist_in_year);
 
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-        SharedPreferences.Editor editor = sp.edit();
-        editor.putBoolean("killed", true);
-        editor.apply();
-
         db = openOrCreateDatabase("favorite", MODE_PRIVATE, null);
 
         mediaPlayerUI = findViewById(R.id.bottom_sheet);
@@ -201,10 +196,6 @@ public class ArtistInYear extends AppCompatActivity implements RemoveQueueItem.S
         unregisterReceiver(seekUpdate);
         unregisterReceiver(queueUpdate);
         writeData();
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-        SharedPreferences.Editor editor = sp.edit();
-        editor.putBoolean("killed", false);
-        editor.apply();
         super.onDestroy();
     }
 

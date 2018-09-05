@@ -133,11 +133,6 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_favorite);
 
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-        SharedPreferences.Editor editor = sp.edit();
-        editor.putBoolean("killed", true);
-        editor.apply();
-
         db = openOrCreateDatabase("favorite", MODE_PRIVATE, null);
 
         mediaPlayerUI = findViewById(R.id.bottom_sheet);
@@ -182,10 +177,6 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
         unregisterReceiver(listChanged);
         unregisterReceiver(seekUpdate);
         unregisterReceiver(queueUpdate);
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-        SharedPreferences.Editor editor = sp.edit();
-        editor.putBoolean("killed", false);
-        editor.apply();
         super.onDestroy();
     }
 

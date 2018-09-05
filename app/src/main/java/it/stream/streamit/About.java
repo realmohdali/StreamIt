@@ -123,11 +123,6 @@ public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToR
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_about);
 
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-        SharedPreferences.Editor editor = sp.edit();
-        editor.putBoolean("killed", true);
-        editor.apply();
-
         db = openOrCreateDatabase("favorite", MODE_PRIVATE, null);
 
         mediaPlayerUI = findViewById(R.id.bottom_sheet);
@@ -174,10 +169,6 @@ public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToR
         unregisterReceiver(resetPlayerUI);
         unregisterReceiver(seekUpdate);
         unregisterReceiver(queueUpdate);
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-        SharedPreferences.Editor editor = sp.edit();
-        editor.putBoolean("killed", false);
-        editor.apply();
         super.onDestroy();
     }
 

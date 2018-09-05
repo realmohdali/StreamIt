@@ -17,6 +17,7 @@
         android:theme="@style/AppTheme">
         <activity
             android:name=".MainActivity"
+            android:launchMode="singleTop"
             android:screenOrientation="nosensor"
             android:theme="@style/tabTheme">
             <intent-filter>
@@ -43,7 +44,8 @@
             android:theme="@style/tabTheme"
             android:windowSoftInputMode="stateAlwaysVisible" />
 
-        <service android:name=".backgroundService.MediaService" />
+        <service android:name=".backgroundService.MediaService"
+            android:stopWithTask="false"/>
 
         <receiver android:name="android.support.v4.media.session.MediaButtonReceiver">
             <intent-filter>

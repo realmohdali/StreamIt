@@ -21,6 +21,10 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.google.android.flexbox.FlexDirection;
+import com.google.android.flexbox.FlexboxLayoutManager;
+import com.google.android.flexbox.JustifyContent;
+import com.google.gson.JsonArray;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -32,9 +36,11 @@ import java.util.List;
 import it.stream.streamit.R;
 import it.stream.streamit.adapters.AlbumAdapter;
 import it.stream.streamit.adapters.ArtistHomeAdapter;
+import it.stream.streamit.adapters.LatestAdapter;
 import it.stream.streamit.adapters.YearHomeAdapter;
 import it.stream.streamit.dataList.ArtistList;
 import it.stream.streamit.dataList.ListItem;
+import it.stream.streamit.dataList.RecentList;
 import it.stream.streamit.dataList.YearList;
 import it.stream.streamit.database.RecentManagement;
 
@@ -60,10 +66,12 @@ public class Home_Tab_Fragment extends Fragment {
     private List<ListItem> mListItems;
     private List<ArtistList> mArtistList;
     private List<YearList> mYearList;
+    private List<RecentList> list;
 
     //URLs
     private static final String URL2 = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showArtist.php";
     private static final String URL3 = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showYear.php";
+    private static final String URL4 = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showRecent.php";
 
     public void setPosition(int position) {
         this.position = position;
@@ -105,6 +113,15 @@ public class Home_Tab_Fragment extends Fragment {
                 });
                 break;
             case 1:
+                loadLatest();
+                refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+                    @Override
+                    public void onRefresh() {
+                        loadLatest();
+                    }
+                });
+                break;
+            case 2:
                 loadArtist();
                 refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
                     @Override
@@ -114,7 +131,7 @@ public class Home_Tab_Fragment extends Fragment {
                     }
                 });
                 break;
-            case 2:
+            case 3:
                 loadYear();
                 refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
                     @Override
@@ -143,6 +160,59 @@ public class Home_Tab_Fragment extends Fragment {
         mRecyclerView.setVisibility(View.VISIBLE);
         mAdapter = new AlbumAdapter(context, mListItems, favDatabase);
         mRecyclerView.setAdapter(mAdapter);
+        refreshLayout.setRefreshing(false);
+    }
+
+    private void loadLatest() {
+
+        mRecyclerView.setVisibility(View.GONE);
+        mRelativeLayout.setVisibility(View.VISIBLE);
+
+        list = new ArrayList<>();
+
+        StringRequest stringRequest = new StringRequest(Request.Method.GET,
+                URL4,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        try {
+                            JSONArray jsonArray = new JSONArray(response);
+
+                            for (int i = 0; i < jsonArray.length(); i++) {
+                                JSONObject jsonObject = jsonArray.getJSONObject(i);
+
+                                String image = "http://realmohdali.000webhostapp.com/streamIt/";
+                                image += jsonObject.getString("img");
+                                String artist = jsonObject.getString("artist");
+                                String year = jsonObject.getString("year");
+
+                                RecentList li = new RecentList(artist, year, image);
+                                list.add(li);
+                            }
+                            mRelativeLayout.setVisibility(View.GONE);
+                            mRecyclerView.setVisibility(View.VISIBLE);
+                            noRecent.setVisibility(View.GONE);
+
+                            FlexboxLayoutManager layoutManager = new FlexboxLayoutManager(context);
+                            layoutManager.setFlexDirection(FlexDirection.ROW);
+                            layoutManager.setJustifyContent(JustifyContent.CENTER);
+                            mRecyclerView.setLayoutManager(layoutManager);
+                            mRecyclerView.setAdapter(new LatestAdapter(context, list, mActivity));
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+
+            }
+        });
+        stringRequest.setShouldCache(false);
+        RequestQueue requestQueue = Volley.newRequestQueue(context);
+        requestQueue.add(stringRequest);
+
         refreshLayout.setRefreshing(false);
     }
 

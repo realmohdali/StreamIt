@@ -139,11 +139,6 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_search);
 
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-        SharedPreferences.Editor editor = sp.edit();
-        editor.putBoolean("killed", true);
-        editor.apply();
-
         mediaPlayerUI = findViewById(R.id.bottom_sheet);
         mediaPlayerUI.setVisibility(View.GONE);
 
@@ -190,10 +185,6 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
         unregisterReceiver(seekUpdate);
         unregisterReceiver(resetPlayerUI);
         unregisterReceiver(queueUpdate);
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-        SharedPreferences.Editor editor = sp.edit();
-        editor.putBoolean("killed", false);
-        editor.apply();
         super.onDestroy();
     }
 
