@@ -243,6 +243,10 @@ public class Home_Tab_Fragment extends Fragment {
                                 ArtistList li = new ArtistList(artist, image, nationality, years);
                                 mArtistList.add(li);
                             }
+                            FlexboxLayoutManager layoutManager = new FlexboxLayoutManager(context);
+                            layoutManager.setFlexDirection(FlexDirection.ROW);
+                            layoutManager.setJustifyContent(JustifyContent.CENTER);
+                            mRecyclerView.setLayoutManager(layoutManager);
                             mAdapter = new ArtistHomeAdapter(mArtistList, context, mActivity);
                             mRecyclerView.setAdapter(mAdapter);
                             refreshLayout.setRefreshing(false);
@@ -289,7 +293,10 @@ public class Home_Tab_Fragment extends Fragment {
                                 YearList li = new YearList(year, image);
                                 mYearList.add(li);
                             }
-
+                            FlexboxLayoutManager layoutManager = new FlexboxLayoutManager(context);
+                            layoutManager.setFlexDirection(FlexDirection.ROW);
+                            layoutManager.setJustifyContent(JustifyContent.CENTER);
+                            mRecyclerView.setLayoutManager(layoutManager);
                             mAdapter = new YearHomeAdapter(context, mYearList, mActivity);
                             mRecyclerView.setAdapter(mAdapter);
                             refreshLayout.setRefreshing(false);
