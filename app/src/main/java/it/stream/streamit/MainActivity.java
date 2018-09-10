@@ -290,8 +290,7 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
 
     private void setUpTabs() {
         TabLayout tabLayout = findViewById(R.id.tab_layout);
-        tabLayout.addTab(tabLayout.newTab().setText(R.string.tabRecent));
-        tabLayout.addTab(tabLayout.newTab().setText(R.string.tabNew));
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.home));
         tabLayout.addTab(tabLayout.newTab().setText(R.string.tabArtist));
         tabLayout.addTab(tabLayout.newTab().setText(R.string.tabYear));
         tabLayout.setTabGravity(TabLayout.GRAVITY_FILL);

@@ -7,12 +7,12 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
 
+import it.stream.streamit.tabFragments.Home_Tab;
 import it.stream.streamit.tabFragments.Home_Tab_Fragment;
 
 public class PagerAdapter extends FragmentStatePagerAdapter {
 
     private int mNumOfTabs;
-    private Home_Tab_Fragment tab;
     private Context context;
     private Activity mActivity;
     private SQLiteDatabase database;
@@ -29,12 +29,20 @@ public class PagerAdapter extends FragmentStatePagerAdapter {
 
     @Override
     public Fragment getItem(int i) {
-        tab = new Home_Tab_Fragment();
+        if (i == 0) {
+            Home_Tab home_tab = new Home_Tab();
+            home_tab.setContext(context);
+            home_tab.setmActivity(mActivity);
+            home_tab.setDatabase(database);
+            home_tab.setFavDatabase(favDatabase);
+
+            return home_tab;
+        }
+        Home_Tab_Fragment tab = new Home_Tab_Fragment();
         tab.setPosition(i);
         tab.setContext(context);
         tab.setmActivity(mActivity);
-        tab.setDatabase(database);
-        tab.setFavDatabase(favDatabase);
+
         return tab;
     }
 

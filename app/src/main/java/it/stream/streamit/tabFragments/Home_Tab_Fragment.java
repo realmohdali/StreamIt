@@ -2,7 +2,6 @@ package it.stream.streamit.tabFragments;
 
 import android.app.Activity;
 import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -24,7 +23,6 @@ import com.android.volley.toolbox.Volley;
 import com.google.android.flexbox.FlexDirection;
 import com.google.android.flexbox.FlexboxLayoutManager;
 import com.google.android.flexbox.JustifyContent;
-import com.google.gson.JsonArray;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -34,15 +32,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import it.stream.streamit.R;
-import it.stream.streamit.adapters.AlbumAdapter;
 import it.stream.streamit.adapters.ArtistHomeAdapter;
-import it.stream.streamit.adapters.LatestAdapter;
 import it.stream.streamit.adapters.YearHomeAdapter;
 import it.stream.streamit.dataList.ArtistList;
-import it.stream.streamit.dataList.ListItem;
-import it.stream.streamit.dataList.RecentList;
 import it.stream.streamit.dataList.YearList;
-import it.stream.streamit.database.RecentManagement;
 
 public class Home_Tab_Fragment extends Fragment {
 
@@ -51,27 +44,19 @@ public class Home_Tab_Fragment extends Fragment {
     private Context context;
     private RecyclerView mRecyclerView;
     private RecyclerView.Adapter mAdapter;
-    private SQLiteDatabase database;
-    private SQLiteDatabase favDatabase;
 
-    public void setFavDatabase(SQLiteDatabase favDatabase) {
-        this.favDatabase = favDatabase;
-    }
 
     private SwipeRefreshLayout refreshLayout;
 
     private RelativeLayout mRelativeLayout;
     private RelativeLayout noRecent;
 
-    private List<ListItem> mListItems;
     private List<ArtistList> mArtistList;
     private List<YearList> mYearList;
-    private List<RecentList> list;
 
     //URLs
     private static final String URL2 = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showArtist.php";
     private static final String URL3 = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showYear.php";
-    private static final String URL4 = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showRecent.php";
 
     public void setPosition(int position) {
         this.position = position;
@@ -85,9 +70,6 @@ public class Home_Tab_Fragment extends Fragment {
         this.context = context;
     }
 
-    public void setDatabase(SQLiteDatabase database) {
-        this.database = database;
-    }
 
     @Nullable
     @Override
@@ -98,30 +80,10 @@ public class Home_Tab_Fragment extends Fragment {
         mRecyclerView = view.findViewById(R.id.homeRecyclerView);
         refreshLayout = view.findViewById(R.id.swipeToRefresh);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
-        mListItems = new ArrayList<>();
         mArtistList = new ArrayList<>();
         mYearList = new ArrayList<>();
         switch (position) {
-            case 0:
-                loadNew();
-                refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-                    @Override
-                    public void onRefresh() {
-                        mListItems = new ArrayList<>();
-                        loadNew();
-                    }
-                });
-                break;
             case 1:
-                loadLatest();
-                refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-                    @Override
-                    public void onRefresh() {
-                        loadLatest();
-                    }
-                });
-                break;
-            case 2:
                 loadArtist();
                 refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
                     @Override
@@ -131,7 +93,7 @@ public class Home_Tab_Fragment extends Fragment {
                     }
                 });
                 break;
-            case 3:
+            case 2:
                 loadYear();
                 refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
                     @Override
@@ -143,77 +105,6 @@ public class Home_Tab_Fragment extends Fragment {
                 break;
         }
         return view;
-    }
-
-
-    private void loadNew() {
-        mRecyclerView.setVisibility(View.GONE);
-        mRelativeLayout.setVisibility(View.VISIBLE);
-        RecentManagement showRecent = new RecentManagement(database);
-        mListItems = showRecent.showRecent();
-        if (mListItems != null && mListItems.size() > 0) {
-            noRecent.setVisibility(View.GONE);
-        } else {
-            noRecent.setVisibility(View.VISIBLE);
-        }
-        mRelativeLayout.setVisibility(View.GONE);
-        mRecyclerView.setVisibility(View.VISIBLE);
-        mAdapter = new AlbumAdapter(context, mListItems, favDatabase);
-        mRecyclerView.setAdapter(mAdapter);
-        refreshLayout.setRefreshing(false);
-    }
-
-    private void loadLatest() {
-
-        mRecyclerView.setVisibility(View.GONE);
-        mRelativeLayout.setVisibility(View.VISIBLE);
-
-        list = new ArrayList<>();
-
-        StringRequest stringRequest = new StringRequest(Request.Method.GET,
-                URL4,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        try {
-                            JSONArray jsonArray = new JSONArray(response);
-
-                            for (int i = 0; i < jsonArray.length(); i++) {
-                                JSONObject jsonObject = jsonArray.getJSONObject(i);
-
-                                String image = "http://realmohdali.000webhostapp.com/streamIt/";
-                                image += jsonObject.getString("img");
-                                String artist = jsonObject.getString("artist");
-                                String year = jsonObject.getString("year");
-
-                                RecentList li = new RecentList(artist, year, image);
-                                list.add(li);
-                            }
-                            mRelativeLayout.setVisibility(View.GONE);
-                            mRecyclerView.setVisibility(View.VISIBLE);
-                            noRecent.setVisibility(View.GONE);
-
-                            FlexboxLayoutManager layoutManager = new FlexboxLayoutManager(context);
-                            layoutManager.setFlexDirection(FlexDirection.ROW);
-                            layoutManager.setJustifyContent(JustifyContent.CENTER);
-                            mRecyclerView.setLayoutManager(layoutManager);
-                            mRecyclerView.setAdapter(new LatestAdapter(context, list, mActivity));
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-
-                    }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-
-            }
-        });
-        stringRequest.setShouldCache(false);
-        RequestQueue requestQueue = Volley.newRequestQueue(context);
-        requestQueue.add(stringRequest);
-
-        refreshLayout.setRefreshing(false);
     }
 
     private void loadArtist() {

@@ -27,7 +27,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
-            android:text="@string/you_have_not_palyed_anything_recently"
+            android:text="@string/you_have_not_played_anything_recently"
             android:textColor="@color/colorWhite" />
     </RelativeLayout>
 

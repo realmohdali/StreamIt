@@ -62,6 +62,8 @@
         Hazrat, such as Janab Nadeem Sarwar, Janab Irfan Haider and many more.
     </string>
     <string name="feedback">Feedback</string>
-    <string name="you_have_not_palyed_anything_recently">You have not palyed anything recently</string>
+    <string name="you_have_not_played_anything_recently">You have not played anything recently</string>
+    <string name="new_release">New Release</string>
+    <string name="recently_played">Recently Played</string>
 
 </resources>
