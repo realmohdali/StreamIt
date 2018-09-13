@@ -65,5 +65,10 @@
     <string name="you_have_not_played_anything_recently">You have not played anything recently</string>
     <string name="new_release">New Release</string>
     <string name="recently_played">Recently Played</string>
+    <string name="downloading">Downloading</string>
+    <string name="file_name">File Name</string>
+    <string name="downloaded">Downloaded</string>
+    <string name="downloaded_files_are_taking_0_mb_in_your_storage">Downloaded files are taking 0 MB in your storage</string>
+    <string name="no_downloads">You have not downloaded any Nauha yet</string>
 
 </resources>

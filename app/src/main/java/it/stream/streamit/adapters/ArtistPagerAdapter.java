@@ -17,7 +17,6 @@ public class ArtistPagerAdapter extends FragmentStatePagerAdapter {
     private Context context;
     private List<YearInArtistList> mList;
     private String artist;
-    private Album_Tab_Fragment tab;
     private SQLiteDatabase database;
 
     public ArtistPagerAdapter(FragmentManager fm, int mNumOfTabs, Context context, List<YearInArtistList> mList, String artist, SQLiteDatabase database) {
@@ -31,7 +30,7 @@ public class ArtistPagerAdapter extends FragmentStatePagerAdapter {
 
     @Override
     public Fragment getItem(int i) {
-        tab = new Album_Tab_Fragment();
+        Album_Tab_Fragment tab = new Album_Tab_Fragment();
         tab.setArtist(artist);
         tab.setYear(mList.get(i).getYear());
         tab.setContext(context);

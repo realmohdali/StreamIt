@@ -1,7 +1,9 @@
 package it.stream.streamit.tabFragments;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
@@ -30,6 +32,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -39,6 +42,9 @@ import it.stream.streamit.R;
 import it.stream.streamit.adapters.AlbumAdapter;
 import it.stream.streamit.backgroundService.MediaService;
 import it.stream.streamit.dataList.ListItem;
+import it.stream.streamit.download.DownloadManagement;
+
+import static it.stream.streamit.download.DownloadService.DOWNLOADING;
 
 public class Album_Tab_Fragment extends Fragment {
 
@@ -94,6 +100,32 @@ public class Album_Tab_Fragment extends Fragment {
         return view;
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        registerDownloading();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        context.unregisterReceiver(downloading);
+    }
+
+    private BroadcastReceiver downloading = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            for (int i = 0; i < mList.size(); i++) {
+                mAdapter.notifyItemChanged(i);
+            }
+        }
+    };
+
+    private void registerDownloading() {
+        IntentFilter filter = new IntentFilter(DOWNLOADING);
+        context.registerReceiver(downloading, filter);
+    }
+
     private void loadData() {
         mRecyclerView.setVisibility(View.GONE);
         playAll.setVisibility(View.GONE);
@@ -105,6 +137,27 @@ public class Album_Tab_Fragment extends Fragment {
 
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
         final boolean serviceRunning = sp.getBoolean("serviceRunning", false);
+
+        for (int i = 0; i < mList.size(); i++) {
+            String file_url, image_url, file_title, file_artist, file_year;
+            file_url = mList.get(i).getURL();
+            image_url = mList.get(i).getImageUrl();
+            file_title = mList.get(i).getTitle();
+            file_artist = mList.get(i).getArtist();
+            file_year = mList.get(i).getYear();
+
+            DownloadManagement downloadManagement = new DownloadManagement(file_url, database, context, (file_title + ".mp3"), file_title, image_url, file_artist, file_year);
+            final boolean exists = downloadManagement.fileExists();
+
+            if (exists) {
+                String fileName = file_title + ".mp3";
+                File file = context.getFileStreamPath(fileName);
+                String newUrl = file.getAbsolutePath();
+
+                ListItem item = new ListItem(file_title, file_artist, image_url, newUrl, file_year);
+                mList.set(i, item);
+            }
+        }
 
         int i;
 

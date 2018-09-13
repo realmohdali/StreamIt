@@ -3,6 +3,8 @@ package it.stream.streamit;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -10,6 +12,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
@@ -146,6 +149,8 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        createNotificationChannel();
 
         clearData();
 
@@ -297,10 +302,9 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
 
         final ViewPager viewPager = findViewById(R.id.pager);
 
-        final SQLiteDatabase recentDatabase = openOrCreateDatabase("recent", MODE_PRIVATE, null);
         final SQLiteDatabase database = openOrCreateDatabase("favorite", MODE_PRIVATE, null);
 
-        final PagerAdapter pagerAdapter = new PagerAdapter(getSupportFragmentManager(), tabLayout.getTabCount(), getApplicationContext(), mActivity, recentDatabase, database);
+        final PagerAdapter pagerAdapter = new PagerAdapter(getSupportFragmentManager(), tabLayout.getTabCount(), this, mActivity, database, database);
 
         viewPager.setAdapter(pagerAdapter);
 
@@ -340,6 +344,16 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
                         mDrawerLayout.closeDrawers();
                         if (ConnectionCheck.isConnected(getApplicationContext())) {
                             Intent intent = new Intent(getApplicationContext(), Favorite.class);
+                            startActivity(intent);
+                            overridePendingTransition(0, 0);
+                        } else {
+                            Toast.makeText(getApplicationContext(), R.string.offline, Toast.LENGTH_SHORT).show();
+                        }
+                        return true;
+                    case R.id.downloaded:
+                        mDrawerLayout.closeDrawers();
+                        if (ConnectionCheck.isConnected(getApplicationContext())) {
+                            Intent intent = new Intent(getApplicationContext(), Downloaded.class);
                             startActivity(intent);
                             overridePendingTransition(0, 0);
                         } else {
@@ -1185,6 +1199,26 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
             if (viewHolder.getAdapterPosition() != playerPosition) {
                 adapter.removeItem(viewHolder.getAdapterPosition());
             }
+        }
+    }
+
+    private void createNotificationChannel() {
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            String description = "Matam | Labbaik Ya Hussain";
+            int importance = NotificationManager.IMPORTANCE_MIN;
+            NotificationChannel channel = new
+                    NotificationChannel(getResources().getString(R.string.notification_channel_id),
+                    getResources().getString(R.string.notification_channel_name), importance);
+
+            channel.setDescription(description);
+            channel.setLightColor(Color.GREEN);
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            assert notificationManager != null;
+            notificationManager.createNotificationChannel(channel);
         }
     }
 }

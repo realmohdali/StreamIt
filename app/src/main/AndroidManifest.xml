@@ -44,8 +44,9 @@
             android:theme="@style/tabTheme"
             android:windowSoftInputMode="stateAlwaysVisible" />
 
-        <service android:name=".backgroundService.MediaService"
-            android:stopWithTask="false"/>
+        <service
+            android:name=".backgroundService.MediaService"
+            android:stopWithTask="false" />
 
         <receiver android:name="android.support.v4.media.session.MediaButtonReceiver">
             <intent-filter>
@@ -58,7 +59,6 @@
             android:name=".About"
             android:screenOrientation="nosensor"
             android:theme="@style/tabTheme" />
-
         <activity
             android:name=".Offline"
             android:screenOrientation="nosensor"
@@ -74,6 +74,12 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+        <service android:name=".download.DownloadService" />
+
+        <activity
+            android:name=".Downloaded"
+            android:screenOrientation="nosensor"
+            android:theme="@style/tabTheme" />
     </application>
 
 </manifest>

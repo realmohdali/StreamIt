@@ -15,23 +15,17 @@ import android.support.design.widget.BottomSheetBehavior;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
-import android.text.Editable;
-import android.text.TextWatcher;
-import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputMethodManager;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -48,14 +42,15 @@ import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
 import java.util.List;
 
-import it.stream.streamit.adapters.AlbumAdapter;
+import it.stream.streamit.adapters.DownloadedAdapter;
 import it.stream.streamit.adapters.QueueAdapter;
+import it.stream.streamit.adapters.RemoveDownloadedItem;
 import it.stream.streamit.adapters.RemoveQueueItem;
 import it.stream.streamit.backgroundService.MediaService;
 import it.stream.streamit.dataList.ListItem;
 import it.stream.streamit.database.ConnectionCheck;
 import it.stream.streamit.database.FavoriteManagement;
-import it.stream.streamit.database.RetrieveSearchedData;
+import it.stream.streamit.download.DownloadManagement;
 import jp.wasabeef.glide.transformations.BlurTransformation;
 
 import static com.bumptech.glide.request.RequestOptions.bitmapTransform;
@@ -72,29 +67,28 @@ import static it.stream.streamit.backgroundService.MediaService.Buffering_Update
 import static it.stream.streamit.backgroundService.MediaService.New_Audio;
 import static it.stream.streamit.backgroundService.MediaService.buffering_End;
 
-public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeToRemoveListener {
+public class Downloaded extends AppCompatActivity implements RemoveDownloadedItem.SwipeToRemoveListener, RemoveQueueItem.SwipeToRemoveListener {
+
+    private DownloadedAdapter downloadedAdapter;
+    private SQLiteDatabase database;
+    private RecyclerView downloadView;
+    private TextView noDownloads;
+    private TextView fileSize;
+    private SwipeRefreshLayout refreshLayout;
 
     private Toolbar toolbar;
-    private EditText searchBar;
 
-    private RecyclerView mRecyclerView;
-
-    private String mediaQueue;
-
-    private RelativeLayout noResultLayout;
-    private TextView noResultView;
-
-    private SQLiteDatabase db;
+    private LinearLayout mainLayout;
 
     private DrawerLayout mDrawerLayout;
     private boolean drawerOpen;
-    private LinearLayout linearLayout;
     private RelativeLayout mediaPlayerUI;
     private String trackUrl;
 
+    private String mediaQueue;
+
     private boolean playing;
     private boolean serviceRunning;
-
 
     //BottomSheetStuff
     private ImageButton pb;
@@ -113,6 +107,7 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
     private boolean isFav;
     private int loopStatus;
 
+
     private BottomSheetBehavior sheetBehavior;
 
     //Loop strings
@@ -121,9 +116,8 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
     private static final int loopOne = 3;
 
     private int marginInPx;
-    private boolean addPadding = true;
 
-    private QueueAdapter adapter;
+    private QueueAdapter qAdapter;
     private int playerPosition;
     private LinearLayoutManager linearLayoutManager;
 
@@ -137,7 +131,9 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_search);
+        setContentView(R.layout.activity_downloaded);
+
+        database = openOrCreateDatabase("favorite", MODE_PRIVATE, null);
 
         mediaPlayerUI = findViewById(R.id.bottom_sheet);
         mediaPlayerUI.setVisibility(View.GONE);
@@ -145,13 +141,9 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
         float scale = getResources().getDisplayMetrics().density;
         marginInPx = (int) (50 * scale + 0.5f);
 
-        linearLayout = findViewById(R.id.searchLayout);
-        linearLayout.setPadding(0, 0, 0, 0);
-
-
-        loadActivity();
+        mDrawerLayout = findViewById(R.id.drawer_layout);
         setUpToolbar();
-        handleSearch();
+        loadActivity();
         loadBottomSheet();
     }
 
@@ -161,9 +153,8 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
         readData();
         setUpNavDrawer();
         if (haveTrack) {
-            addPadding = false;
             mediaPlayerUI.setVisibility(View.VISIBLE);
-            linearLayout.setPadding(0, 0, 0, marginInPx);
+            mainLayout.setPadding(0, 0, 0, marginInPx);
             loadPlayer();
         }
 
@@ -182,8 +173,8 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
         unregisterReceiver(bufferingEnd);
         unregisterReceiver(paused);
         unregisterReceiver(resume);
-        unregisterReceiver(seekUpdate);
         unregisterReceiver(resetPlayerUI);
+        unregisterReceiver(seekUpdate);
         unregisterReceiver(queueUpdate);
         super.onDestroy();
     }
@@ -211,24 +202,6 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
         registerResetPlayerUI();
         registerSeekUpdate();
         registerQueueUpdate();
-
-        searchBar = findViewById(R.id.searchBar);
-        searchBar.requestFocus();
-
-        mRecyclerView = findViewById(R.id.search_view);
-        LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
-        mRecyclerView.setLayoutManager(layoutManager);
-        DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(mRecyclerView.getContext(), layoutManager.getOrientation());
-        mRecyclerView.addItemDecoration(dividerItemDecoration);
-        db = openOrCreateDatabase("search", MODE_PRIVATE, null);
-
-        noResultLayout = findViewById(R.id.noResult);
-        noResultView = findViewById(R.id.result_view);
-
-        mRecyclerView.setVisibility(View.GONE);
-
-
-        mDrawerLayout = findViewById(R.id.drawer_layout);
 
         //Bottom Sheet Stuff
         pb = findViewById(R.id.play);
@@ -260,6 +233,20 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
         loopStatus = noLoop;
 
         trackUrl = "";
+
+        mainLayout = findViewById(R.id.mainLayout);
+        downloadView = findViewById(R.id.downloadView);
+        noDownloads = findViewById(R.id.noDownloads);
+        fileSize = findViewById(R.id.fileSize);
+
+        refreshLayout = findViewById(R.id.refresh);
+        refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                loadData();
+            }
+        });
+        loadData();
     }
 
     private void setUpToolbar() {
@@ -267,42 +254,38 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
+        getSupportActionBar().setTitle("Downloaded Files");
     }
 
     private void setUpNavDrawer() {
         mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END);
         NavigationView navigationView = findViewById(R.id.nav_view);
         drawerOpen = false;
-        for (int i = 0; i < 3; i++) {
-            navigationView.getMenu().getItem(i).setChecked(false);
-        }
+        navigationView.getMenu().getItem(2).setChecked(true);
         navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
             @Override
             public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
                 switch (menuItem.getItemId()) {
                     case R.id.homePage:
                         mDrawerLayout.closeDrawers();
-                        Intent intent1 = new Intent(getApplicationContext(), MainActivity.class);
-                        intent1.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                        startActivity(intent1);
+                        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                        startActivity(intent);
                         overridePendingTransition(0, 0);
                         return true;
                     case R.id.favOption:
                         mDrawerLayout.closeDrawers();
-                        Intent intent = new Intent(getApplicationContext(), Favorite.class);
-                        startActivity(intent);
+                        Intent intent2 = new Intent(getApplicationContext(), Favorite.class);
+                        startActivity(intent2);
                         overridePendingTransition(0, 0);
                         return true;
                     case R.id.downloaded:
                         mDrawerLayout.closeDrawers();
-                        Intent intent3 = new Intent(getApplicationContext(), Downloaded.class);
-                        startActivity(intent3);
-                        overridePendingTransition(0, 0);
                         return true;
                     case R.id.about:
                         mDrawerLayout.closeDrawers();
-                        Intent intent2 = new Intent(getApplicationContext(), About.class);
-                        startActivity(intent2);
+                        Intent intent1 = new Intent(getApplicationContext(), About.class);
+                        startActivity(intent1);
                         overridePendingTransition(0, 0);
                         return true;
                     case R.id.feedback:
@@ -429,7 +412,7 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
             public void onClick(View view) {
                 if (haveTrack) {
                     if (isFav) {
-                        FavoriteManagement favoriteManagement = new FavoriteManagement(trackTitle, trackUrl, trackImg, trackArtist, trackYear, db, getApplicationContext());
+                        FavoriteManagement favoriteManagement = new FavoriteManagement(trackTitle, trackUrl, trackImg, trackArtist, trackYear, database, getApplicationContext());
                         switch (favoriteManagement.removeFav()) {
                             case FavoriteManagement.SUCCESS:
                                 fav.setImageResource(R.drawable.ic_favorite_border_white_24dp);
@@ -446,7 +429,7 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
                                 break;
                         }
                     } else {
-                        FavoriteManagement favoriteManagement = new FavoriteManagement(trackTitle, trackUrl, trackImg, trackArtist, trackYear, db, getApplicationContext());
+                        FavoriteManagement favoriteManagement = new FavoriteManagement(trackTitle, trackUrl, trackImg, trackArtist, trackYear, database, getApplicationContext());
                         switch (favoriteManagement.addFav()) {
                             case FavoriteManagement.SUCCESS:
                                 fav.setImageResource(R.drawable.ic_favorite_green_24dp);
@@ -525,70 +508,38 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
         });
     }
 
-    private void handleSearch() {
-        searchBar.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
-                if (i == EditorInfo.IME_ACTION_SEARCH) {
-                    if (searchBar.getText().toString().trim().length() > 0) {
-                        loadSearchedData(searchBar.getText().toString());
-                        InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                        inputMethodManager.hideSoftInputFromWindow(searchBar.getWindowToken(), 0);
-                        return true;
-                    } else {
-                        return false;
-                    }
-                }
-                return false;
-            }
-        });
-
-        TextWatcher textWatcher = new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-                if (longEnough()) {
-                    loadSearchedData(searchBar.getText().toString());
-                }
-            }
-
-            private boolean longEnough() {
-                return searchBar.getText().toString().trim().length() > 2;
-            }
-        };
-        searchBar.addTextChangedListener(textWatcher);
-    }
-
-    private void loadSearchedData(String s) {
-        RetrieveSearchedData retrieveSearchedData = new RetrieveSearchedData(db);
-        List<ListItem> mList = retrieveSearchedData.getData(s);
-
-        if (mList.size() > 0) {
-            noResultLayout.setVisibility(View.GONE);
-            mRecyclerView.setVisibility(View.VISIBLE);
-
-            SQLiteDatabase database = openOrCreateDatabase("favorite", MODE_PRIVATE, null);
-
-            RecyclerView.Adapter mAdapter = new AlbumAdapter(this, mList, database);
-            mRecyclerView.setAdapter(mAdapter);
+    private void loadData() {
+        List<ListItem> list = getData();
+        if (!(list.size() > 0)) {
+            noDownloads.setVisibility(View.VISIBLE);
         } else {
-            mRecyclerView.setVisibility(View.GONE);
-            noResultLayout.setVisibility(View.VISIBLE);
-            noResultView.setText(R.string.no_result);
+            noDownloads.setVisibility(View.GONE);
         }
+
+        String file_size = getFileSize();
+        if (!file_size.equalsIgnoreCase("")) {
+            fileSize.setText(getFileSize());
+        }
+
+        downloadedAdapter = new DownloadedAdapter(this, list, database);
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
+        downloadView.setLayoutManager(layoutManager);
+        downloadView.setAdapter(downloadedAdapter);
+
+        ItemTouchHelper.SimpleCallback itemTouchHelperCallback = new RemoveDownloadedItem(0, ItemTouchHelper.LEFT, this);
+        new ItemTouchHelper(itemTouchHelperCallback).attachToRecyclerView(downloadView);
+
+        refreshLayout.setRefreshing(false);
     }
 
-    public void clearText(View view) {
-        searchBar.setText("");
+    private List<ListItem> getData() {
+        DownloadManagement downloadManagement = new DownloadManagement(database);
+        return downloadManagement.showDownloads();
+    }
+
+    private String getFileSize() {
+        DownloadManagement downloadManagement = new DownloadManagement(database);
+        return downloadManagement.getFileLength();
     }
 
     //Methods to load data on screen End
@@ -618,7 +569,7 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
             loadPlayer();
             writeData();
 
-            adapter.update("playing", playerPosition);
+            qAdapter.update("playing", playerPosition);
             linearLayoutManager.scrollToPosition(playerPosition);
         }
     };
@@ -633,15 +584,13 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
         public void onReceive(Context context, Intent intent) {
             readData();
 
-            if (addPadding) {
-                mediaPlayerUI.setVisibility(View.VISIBLE);
-                mRecyclerView.setPadding(0, 0, 0, marginInPx);
-            }
+            mediaPlayerUI.setVisibility(View.VISIBLE);
+            mainLayout.setPadding(0, 0, 0, marginInPx);
 
             loadPlayer();
             writeData();
 
-            adapter.update("loading", playerPosition);
+            qAdapter.update("loading", playerPosition);
             linearLayoutManager.scrollToPosition(playerPosition);
         }
     };
@@ -743,8 +692,7 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
             }
 
             mediaPlayerUI.setVisibility(View.GONE);
-            mRecyclerView.setPadding(0, 0, 0, 0);
-            addPadding = true;
+            mainLayout.setPadding(0, 0, 0, 0);
         }
     };
 
@@ -949,14 +897,14 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
         ItemTouchHelper.SimpleCallback itemTouchHelperCallback = new RemoveQueueItem(0, ItemTouchHelper.LEFT, this);
         new ItemTouchHelper(itemTouchHelperCallback).attachToRecyclerView(queue);
 
-        adapter = new QueueAdapter(getApplicationContext(), mPlaylist);
-        queue.setAdapter(adapter);
+        qAdapter = new QueueAdapter(getApplicationContext(), mPlaylist);
+        queue.setAdapter(qAdapter);
 
         if (isLoading) {
-            adapter.update("loading", playerPosition);
+            qAdapter.update("loading", playerPosition);
             linearLayoutManager.scrollToPosition(playerPosition);
         } else {
-            adapter.update("playing", playerPosition);
+            qAdapter.update("playing", playerPosition);
             linearLayoutManager.scrollToPosition(playerPosition);
         }
 
@@ -1061,11 +1009,17 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
             case android.R.id.home:
                 if (expanded) {
                     sheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                    return true;
                 } else {
+                    writeData();
                     finish();
                     overridePendingTransition(0, 0);
-                    writeData();
+                    return true;
                 }
+            case R.id.srchBtn:
+                Intent intent = new Intent(this, Search.class);
+                startActivity(intent);
+                overridePendingTransition(0, 0);
                 return true;
             case R.id.showQueue:
                 mDrawerLayout.openDrawer(GravityCompat.END);
@@ -1082,16 +1036,15 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
         } else {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setDisplayShowHomeEnabled(true);
+            getMenuInflater().inflate(R.menu.main_menu, menu);
+            return true;
         }
-        return true;
     }
 
     @Override
     public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction, int position) {
-        if (viewHolder instanceof QueueAdapter.ViewHolder) {
-            if (viewHolder.getAdapterPosition() != playerPosition) {
-                adapter.removeItem(viewHolder.getAdapterPosition());
-            }
+        if (viewHolder instanceof DownloadedAdapter.ViewHolder) {
+            downloadedAdapter.removeItem(viewHolder.getAdapterPosition(), database);
         }
     }
 }

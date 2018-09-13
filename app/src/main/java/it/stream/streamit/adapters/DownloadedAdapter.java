@@ -1,13 +1,11 @@
 package it.stream.streamit.adapters;
 
 import android.app.AlertDialog;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
@@ -17,15 +15,13 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.google.gson.Gson;
 
 import java.io.File;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.List;
 
 import it.stream.streamit.database.ConnectionCheck;
@@ -39,55 +35,59 @@ import jp.wasabeef.glide.transformations.RoundedCornersTransformation;
 import static com.bumptech.glide.request.RequestOptions.bitmapTransform;
 import static it.stream.streamit.backgroundService.MediaPlayerControllerConstants.ADD_TO_PLAYLIST;
 
-public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> {
+public class DownloadedAdapter extends RecyclerView.Adapter<DownloadedAdapter.ViewHolder> {
 
-    public static final String Broadcast_PLAY_NEW_AUDIO = "it.stream.streamit.PlayNewAudio";
+    private static final String Broadcast_PLAY_NEW_AUDIO = "it.stream.streamit.PlayNewAudio";
     private Context mContext;
     private List<ListItem> mList;
-    private boolean serviceRunning;
     private SQLiteDatabase database;
+
+    private boolean serviceRunning;
     private String title, url, sub, img, artist, year;
-    private DownloadManagement downloadManagement;
-    private int fileSize;
 
+    private int len;
 
-    public AlbumAdapter(Context mContext, List<ListItem> mList, SQLiteDatabase database) {
+    public DownloadedAdapter(Context mContext, List<ListItem> mList, SQLiteDatabase database) {
         this.mContext = mContext;
         this.mList = mList;
+        len = mList.size();
         this.database = database;
     }
-
 
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
-        View v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.album_list_view_item, viewGroup, false);
+        View v = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.fav_item, viewGroup, false);
         return new ViewHolder(v);
     }
 
     @Override
     public void onBindViewHolder(@NonNull final ViewHolder viewHolder, int i) {
+
+        viewHolder.addToFav.setVisibility(View.VISIBLE);
+
         viewHolder.a.setText(mList.get(i).getArtist());
         viewHolder.t.setText(mList.get(i).getTitle());
         viewHolder.y.setText(mList.get(i).getYear());
 
-        viewHolder.loading.setVisibility(View.GONE);
-        viewHolder.down.setVisibility(View.VISIBLE);
 
-        final String file_url, image_url, file_title, file_artist, file_year;
+        String file_url, image_url, file_title, file_artist, file_year;
         file_url = mList.get(i).getURL();
         image_url = mList.get(i).getImageUrl();
         file_title = mList.get(i).getTitle();
         file_artist = mList.get(i).getArtist();
         file_year = mList.get(i).getYear();
 
-        downloadManagement = new DownloadManagement(file_url, database, mContext, (file_title + ".mp3"), file_title, image_url, file_artist, file_year);
+        DownloadManagement downloadManagement = new DownloadManagement(file_url, database, mContext, (file_title + ".mp3"), file_title, image_url, file_artist, file_year);
         final boolean exists = downloadManagement.fileExists();
 
-        if (isFav(mList.get(i).getURL())) {
-            viewHolder.addToFav.setImageResource(R.drawable.ic_favorite_green_24dp);
-        } else {
-            viewHolder.addToFav.setImageResource(R.drawable.ic_favorite_border_white_24dp);
+        if (exists) {
+            String fileName = file_title + ".mp3";
+            File file = mContext.getFileStreamPath(fileName);
+            String newUrl = file.getAbsolutePath();
+
+            ListItem item = new ListItem(file_title, file_artist, image_url, newUrl, file_year);
+            mList.set(i, item);
         }
 
         Glide.with(mContext)
@@ -96,6 +96,46 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> 
                 .apply(bitmapTransform(new RoundedCornersTransformation(5, 0, RoundedCornersTransformation.CornerType.ALL)))
                 .into(viewHolder.iv);
 
+        viewHolder.foreground.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (ConnectionCheck.isConnected(mContext)) {
+
+                    readData();
+                    int i = viewHolder.getAdapterPosition();
+
+                    url = mList.get(i).getURL();
+                    title = mList.get(i).getTitle();
+                    sub = mList.get(i).getArtist();
+                    sub += " | ";
+                    sub += mList.get(i).getYear();
+                    img = mList.get(i).getImageUrl();
+                    year = mList.get(i).getYear();
+                    artist = mList.get(i).getArtist();
+
+                    writeData();
+
+                    Gson gson = new Gson();
+                    String json = gson.toJson(mList);
+
+                    if (!serviceRunning) {
+                        Intent intent = new Intent(mContext, MediaService.class);
+                        intent.putExtra("playlist", json);
+                        intent.putExtra("pos", i);
+                        intent.putExtra("isPlayList", true);
+                        mContext.startService(intent);
+                    } else {
+                        Intent intent = new Intent(Broadcast_PLAY_NEW_AUDIO);
+                        intent.putExtra("playlist", json);
+                        intent.putExtra("pos", i);
+                        intent.putExtra("isPlayList", true);
+                        mContext.sendBroadcast(intent);
+                    }
+                } else {
+                    Toast.makeText(mContext, "You are not connected to Internet", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
 
         viewHolder.addToQ.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -176,164 +216,73 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> 
             }
         });
 
-        if (exists) {
-            viewHolder.down.setVisibility(View.GONE);
-        }
-        viewHolder.down.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(final View view) {
-                class GetSize extends AsyncTask<Void, Void, Void> {
-
-                    @Override
-                    protected void onPreExecute() {
-                        super.onPreExecute();
-                        viewHolder.down.setVisibility(View.GONE);
-                        viewHolder.loading.setVisibility(View.VISIBLE);
-                    }
-
-                    @Override
-                    protected Void doInBackground(Void... voids) {
-                        try {
-                            URL url = new URL(file_url);
-                            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-
-                            fileSize = connection.getContentLength();
-
-                            connection.disconnect();
-
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                        return null;
-                    }
-
-                    @Override
-                    protected void onPostExecute(Void aVoid) {
-                        super.onPostExecute(aVoid);
-
-                        int i = viewHolder.getAdapterPosition();
-
-                        if (fileSize > 0) {
-                            float mbSize = fileSize / (1024 * 1024);
-                            String fileSizeMB = String.valueOf(mbSize) + " MB";
-
-                            AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
-                            builder.setTitle("Download");
-                            builder.setMessage("File : " + mList.get(i).getTitle() + " | Size : " + fileSizeMB);
-                            builder.setPositiveButton("Download", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialogInterface, int i) {
-                                    int j = viewHolder.getAdapterPosition();
-                                    String file_url, image_url, file_title, file_artist, file_year;
-                                    file_url = mList.get(j).getURL();
-                                    image_url = mList.get(j).getImageUrl();
-                                    file_title = mList.get(j).getTitle();
-                                    file_artist = mList.get(j).getArtist();
-                                    file_year = mList.get(j).getYear();
-
-                                    downloadManagement = new DownloadManagement(file_url, database, mContext, (file_title + ".mp3"), file_title, image_url, file_artist, file_year);
-                                    downloadManagement.initDownload();
-                                }
-                            });
-                            builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialogInterface, int i) {
-                                    dialogInterface.dismiss();
-                                }
-                            });
-                            builder.setCancelable(false);
-
-                            builder.show();
-                        }
-                    }
-                }
-
-                GetSize getSize = new GetSize();
-                getSize.execute();
-            }
-        });
-
-        viewHolder.item.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (ConnectionCheck.isConnected(mContext)) {
-                    readData();
-
-                    int i = viewHolder.getAdapterPosition();
-
-                    url = mList.get(i).getURL();
-                    title = mList.get(i).getTitle();
-                    sub = mList.get(i).getArtist();
-                    sub += " | ";
-                    sub += mList.get(i).getYear();
-                    img = mList.get(i).getImageUrl();
-                    year = mList.get(i).getYear();
-                    artist = mList.get(i).getArtist();
-
-                    writeData();
-
-                    if (!serviceRunning) {
-                        if (exists) {
-                            String fileName = title + ".mp3";
-                            File file = mContext.getFileStreamPath(fileName);
-                            url = file.getAbsolutePath();
-                            writeData();
-                        }
-                        Intent intent = new Intent(mContext, MediaService.class);
-                        intent.putExtra("isPlayList", false);
-                        mContext.startService(intent);
-                    } else {
-                        if (exists) {
-                            String fileName = title + ".mp3";
-                            File file = mContext.getFileStreamPath(fileName);
-                            url = file.getAbsolutePath();
-                            writeData();
-                        }
-                        Intent intent = new Intent(Broadcast_PLAY_NEW_AUDIO);
-                        intent.putExtra("isPlayList", false);
-                        mContext.sendBroadcast(intent);
-                    }
-                } else {
-                    Toast.makeText(mContext, "You are not connected to Internet", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
 
     }
 
     @Override
     public int getItemCount() {
-        try {
-            if (mList.size() > 0) {
-                return mList.size();
-            }
-        } catch (NullPointerException e) {
-            return 0;
-        }
-        return 0;
+        return len;
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-
+        public LinearLayout foreground;
         ImageView iv;
-        TextView t, a, y;
-        LinearLayout item;
-        ImageButton addToQ, addToFav, down;
-        ProgressBar loading;
+        TextView t, a, y, bt;
+        ImageButton addToQ, addToFav;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-
             iv = itemView.findViewById(R.id.image);
             t = itemView.findViewById(R.id.title);
             a = itemView.findViewById(R.id.artist);
             y = itemView.findViewById(R.id.year);
-            item = itemView.findViewById(R.id.albumItemView);
-            addToFav = itemView.findViewById(R.id.addToFav);
+            foreground = itemView.findViewById(R.id.foreground);
+            bt = itemView.findViewById(R.id.backText);
             addToQ = itemView.findViewById(R.id.addToQueue);
-            down = itemView.findViewById(R.id.download);
-            loading = itemView.findViewById(R.id.loadingDownload);
+            addToFav = itemView.findViewById(R.id.addToFav);
         }
+    }
+
+    public void removeItem(int i, final SQLiteDatabase database) {
+
+        final String trackTitle, trackUrl, trackImg, trackArtist, trackYear;
+        trackTitle = mList.get(i).getTitle();
+        trackImg = mList.get(i).getImageUrl();
+        trackArtist = mList.get(i).getArtist();
+        trackYear = mList.get(i).getYear();
+        trackUrl = mList.get(i).getURL();
+
+        final int j = i;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
+        builder.setTitle("Delete File?");
+        builder.setMessage(trackTitle + ".mp3");
+        builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                DownloadManagement downloadManagement = new DownloadManagement(trackUrl, database, mContext, (trackTitle + ".mp3"), trackTitle, trackImg, trackArtist, trackYear);
+                boolean deleted = downloadManagement.deleteFile();
+
+                if (deleted) {
+                    mList.remove(j);
+                    notifyItemRemoved(j);
+                    len = mList.size();
+                } else {
+                    Toast.makeText(mContext, "Unable to delte file", Toast.LENGTH_SHORT).show();
+                    notifyItemChanged(j);
+                }
+            }
+        });
+        builder.setNegativeButton("No", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                notifyItemChanged(j);
+            }
+        });
+
+        AlertDialog dialog = builder.create();
+        dialog.setCancelable(false);
+        dialog.show();
     }
 
     private void writeData() {

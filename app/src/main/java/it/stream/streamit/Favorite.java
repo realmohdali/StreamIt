@@ -267,7 +267,7 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
             ItemTouchHelper.SimpleCallback itemTouchHelperCallback = new SwipeToRemove(0, ItemTouchHelper.LEFT, this);
             new ItemTouchHelper(itemTouchHelperCallback).attachToRecyclerView(mRecyclerView);
 
-            adapter = new FavAdapter(getApplicationContext(), mList);
+            adapter = new FavAdapter(getApplicationContext(), mList, db);
             mRecyclerView.setAdapter(adapter);
 
             swipeRefreshLayout.setRefreshing(false);
@@ -303,6 +303,12 @@ public class Favorite extends AppCompatActivity implements SwipeToRemove.SwipeTo
                         return true;
                     case R.id.favOption:
                         mDrawerLayout.closeDrawers();
+                        return true;
+                    case R.id.downloaded:
+                        mDrawerLayout.closeDrawers();
+                        Intent intent2 = new Intent(getApplicationContext(), Downloaded.class);
+                        startActivity(intent2);
+                        overridePendingTransition(0, 0);
                         return true;
                     case R.id.about:
                         mDrawerLayout.closeDrawers();

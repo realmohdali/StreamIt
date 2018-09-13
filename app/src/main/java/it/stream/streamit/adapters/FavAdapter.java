@@ -13,13 +13,13 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.google.gson.Gson;
 
+import java.io.File;
 import java.util.List;
 
 import it.stream.streamit.database.ConnectionCheck;
@@ -27,6 +27,7 @@ import it.stream.streamit.database.FavoriteManagement;
 import it.stream.streamit.dataList.ListItem;
 import it.stream.streamit.R;
 import it.stream.streamit.backgroundService.MediaService;
+import it.stream.streamit.download.DownloadManagement;
 import jp.wasabeef.glide.transformations.RoundedCornersTransformation;
 
 import static com.bumptech.glide.request.RequestOptions.bitmapTransform;
@@ -34,19 +35,21 @@ import static it.stream.streamit.backgroundService.MediaPlayerControllerConstant
 
 public class FavAdapter extends RecyclerView.Adapter<FavAdapter.ViewHolder> {
 
-    public static final String Broadcast_PLAY_NEW_AUDIO = "it.stream.streamit.PlayNewAudio";
+    private static final String Broadcast_PLAY_NEW_AUDIO = "it.stream.streamit.PlayNewAudio";
     private Context mContext;
     private List<ListItem> mList;
+    private SQLiteDatabase database;
 
     private boolean serviceRunning;
     private String title, url, sub, img, artist, year;
 
     private int len;
 
-    public FavAdapter(Context mContext, List<ListItem> mList) {
+    public FavAdapter(Context mContext, List<ListItem> mList, SQLiteDatabase database) {
         this.mContext = mContext;
         this.mList = mList;
         len = mList.size();
+        this.database = database;
     }
 
     @NonNull
@@ -57,14 +60,31 @@ public class FavAdapter extends RecyclerView.Adapter<FavAdapter.ViewHolder> {
     }
 
     @Override
-    public void onBindViewHolder(@NonNull final ViewHolder viewHolder, final int i) {
-
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
-        final boolean serviceRunning = sp.getBoolean("serviceRunning", false);
+    public void onBindViewHolder(@NonNull final ViewHolder viewHolder, int i) {
 
         viewHolder.a.setText(mList.get(i).getArtist());
         viewHolder.t.setText(mList.get(i).getTitle());
         viewHolder.y.setText(mList.get(i).getYear());
+
+
+        String file_url, image_url, file_title, file_artist, file_year;
+        file_url = mList.get(i).getURL();
+        image_url = mList.get(i).getImageUrl();
+        file_title = mList.get(i).getTitle();
+        file_artist = mList.get(i).getArtist();
+        file_year = mList.get(i).getYear();
+
+        DownloadManagement downloadManagement = new DownloadManagement(file_url, database, mContext, (file_title + ".mp3"), file_title, image_url, file_artist, file_year);
+        final boolean exists = downloadManagement.fileExists();
+
+        if (exists) {
+            String fileName = file_title + ".mp3";
+            File file = mContext.getFileStreamPath(fileName);
+            String newUrl = file.getAbsolutePath();
+
+            ListItem item = new ListItem(file_title, file_artist, image_url, newUrl, file_year);
+            mList.set(i, item);
+        }
 
         Glide.with(mContext)
                 .asBitmap()
@@ -76,6 +96,10 @@ public class FavAdapter extends RecyclerView.Adapter<FavAdapter.ViewHolder> {
             @Override
             public void onClick(View view) {
                 if (ConnectionCheck.isConnected(mContext)) {
+
+                    readData();
+                    int i = viewHolder.getAdapterPosition();
+
                     url = mList.get(i).getURL();
                     title = mList.get(i).getTitle();
                     sub = mList.get(i).getArtist();
@@ -149,7 +173,6 @@ public class FavAdapter extends RecyclerView.Adapter<FavAdapter.ViewHolder> {
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        RelativeLayout background;
         public LinearLayout foreground;
         ImageView iv;
         TextView t, a, y, bt;

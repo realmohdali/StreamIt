@@ -18,21 +18,22 @@ public class RecentManagement {
 
     public void add(ListItem listItem) {
         String url = listItem.getURL();
-        alreadyExist(url);
         String title = listItem.getTitle();
         String artist = listItem.getArtist();
         String img = listItem.getImageUrl();
         String year = listItem.getYear();
+        alreadyExist(title, artist, year);
         database.execSQL("INSERT INTO recent (title, artist, url, image, year) VALUES ('" + title + "','" + artist + "','" + url + "', '" + img + "', '" + year + "')");
 
     }
 
-    private void alreadyExist(String url) {
-        Cursor cursor = database.rawQuery("SELECT * FROM recent WHERE url = '" + url + "'", null);
+    private void alreadyExist(String title, String artist, String year) {
+        Cursor cursor = database.rawQuery("SELECT * FROM recent WHERE title = '" + title + "' AND artist = '" + artist + "' AND year = '" + year + "'", null);
         cursor.moveToFirst();
         if (cursor.getCount() > 0) {
-            database.execSQL("DELETE FROM recent WHERE url  = '" + url + "'");
+            database.execSQL("DELETE FROM recent WHERE title  = '" + title + "' AND artist = '" + artist + "' AND year = '" + year + "'");
         }
+        cursor.close();
     }
 
     public List<ListItem> showRecent() {
@@ -56,7 +57,7 @@ public class RecentManagement {
                 mList.add(li);
                 i++;
             } while (cursor.moveToPrevious());
-
+            cursor.close();
         }
         return mList;
     }

@@ -244,7 +244,7 @@ public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToR
         mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED, GravityCompat.END);
         NavigationView navigationView = findViewById(R.id.nav_view);
         drawerOpen = false;
-        navigationView.getMenu().getItem(2).setChecked(true);
+        navigationView.getMenu().getItem(3).setChecked(true);
         navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
             @Override
             public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
@@ -260,6 +260,12 @@ public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToR
                         mDrawerLayout.closeDrawers();
                         Intent intent1 = new Intent(getApplicationContext(), Favorite.class);
                         startActivity(intent1);
+                        overridePendingTransition(0, 0);
+                        return true;
+                    case R.id.downloaded:
+                        mDrawerLayout.closeDrawers();
+                        Intent intent2 = new Intent(getApplicationContext(), Downloaded.class);
+                        startActivity(intent2);
                         overridePendingTransition(0, 0);
                         return true;
                     case R.id.about:

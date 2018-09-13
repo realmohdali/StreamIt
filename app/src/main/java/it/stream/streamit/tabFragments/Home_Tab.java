@@ -1,7 +1,10 @@
 package it.stream.streamit.tabFragments;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -22,9 +25,6 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
-import com.google.android.flexbox.FlexDirection;
-import com.google.android.flexbox.FlexboxLayoutManager;
-import com.google.android.flexbox.JustifyContent;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -34,12 +34,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import it.stream.streamit.R;
-import it.stream.streamit.adapters.AlbumAdapter;
 import it.stream.streamit.adapters.LatestAdapter;
 import it.stream.streamit.adapters.RecentAdapter;
 import it.stream.streamit.dataList.ListItem;
 import it.stream.streamit.dataList.RecentList;
 import it.stream.streamit.database.RecentManagement;
+
+import static it.stream.streamit.download.DownloadService.DOWNLOADING;
 
 public class Home_Tab extends Fragment {
 
@@ -47,8 +48,8 @@ public class Home_Tab extends Fragment {
     private SQLiteDatabase favDatabase;
     private Activity mActivity;
     private Context context;
+    private RecentAdapter mAdapter;
 
-    private List<ListItem> mListItems;
     private List<RecentList> list;
 
     private RecyclerView newRelease;
@@ -103,6 +104,31 @@ public class Home_Tab extends Fragment {
         return view;
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        registerDownloading();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        context.unregisterReceiver(downloading);
+    }
+
+    private BroadcastReceiver downloading = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            for (int i = 0; i < list.size(); i++) {
+                mAdapter.notifyItemChanged(i);
+            }
+        }
+    };
+
+    private void registerDownloading() {
+        IntentFilter filter = new IntentFilter(DOWNLOADING);
+        context.registerReceiver(downloading, filter);
+    }
 
     private void loadLatest() {
 
@@ -160,7 +186,7 @@ public class Home_Tab extends Fragment {
         loadingRecent.setVisibility(View.VISIBLE);
 
         RecentManagement showRecent = new RecentManagement(database);
-        mListItems = showRecent.showRecent();
+        List<ListItem> mListItems = showRecent.showRecent();
         if (mListItems != null && mListItems.size() > 0) {
             noRecent.setVisibility(View.GONE);
         } else {
@@ -171,7 +197,7 @@ public class Home_Tab extends Fragment {
 
         LinearLayoutManager layoutManager = new LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false);
         recentView.setLayoutManager(layoutManager);
-        RecentAdapter mAdapter = new RecentAdapter(context, mListItems, favDatabase);
+        mAdapter = new RecentAdapter(context, mListItems, favDatabase);
         recentView.setAdapter(mAdapter);
         refresh.setRefreshing(false);
     }

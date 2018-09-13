@@ -295,7 +295,7 @@ public class ArtistInYear extends AppCompatActivity implements RemoveQueueItem.S
         final ViewPager viewPager = findViewById(R.id.pager);
         SQLiteDatabase database = openOrCreateDatabase("favoirte", MODE_PRIVATE, null);
 
-        final YearPagerAdapter pagerAdapter = new YearPagerAdapter(getSupportFragmentManager(), tabLayout.getTabCount(), getApplicationContext(), mList, y, database);
+        final YearPagerAdapter pagerAdapter = new YearPagerAdapter(getSupportFragmentManager(), tabLayout.getTabCount(), this, mList, y, database);
 
         viewPager.setAdapter(pagerAdapter);
 
@@ -402,6 +402,12 @@ public class ArtistInYear extends AppCompatActivity implements RemoveQueueItem.S
                         mDrawerLayout.closeDrawers();
                         Intent intent1 = new Intent(getApplicationContext(), Favorite.class);
                         startActivity(intent1);
+                        overridePendingTransition(0, 0);
+                        return true;
+                    case R.id.downloaded:
+                        mDrawerLayout.closeDrawers();
+                        Intent intent3 = new Intent(getApplicationContext(), Downloaded.class);
+                        startActivity(intent3);
                         overridePendingTransition(0, 0);
                         return true;
                     case R.id.about:

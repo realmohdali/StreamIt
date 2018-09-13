@@ -7,7 +7,8 @@
     <color name="colorGray">#383838</color>
     <color name="colorWhite">#fff</color>
     <color name="colorBlack">#000</color>
-    <color name="colorGreen">#00ff00</color>
+    <color name="colorGreen">#127d47</color>
+    <color name="oldGreen">#00ff00</color>
     <color name="newGray">#383838</color>
     <color name="red">#fa0c0c</color>
 </resources>

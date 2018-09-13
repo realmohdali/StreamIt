@@ -2,8 +2,6 @@ package it.stream.streamit.backgroundService;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -14,11 +12,9 @@ import android.content.SharedPreferences;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
@@ -101,7 +97,7 @@ public class MediaService extends Service
     public static final String Buffering = "it.stream.streamit.Buffering";
     public static final String buffering_End = "it.stream.streamit.bufferingEnd";
 
-    private SQLiteDatabase db, recent;
+    private SQLiteDatabase db;
 
     //parse playlist
     private String json = "";
@@ -122,7 +118,6 @@ public class MediaService extends Service
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         db = openOrCreateDatabase("favorite", MODE_PRIVATE, null);
-        recent = openOrCreateDatabase("recent", MODE_PRIVATE, null);
         mPlaylist = new ArrayList<>();
         try {
             readData();
@@ -134,12 +129,12 @@ public class MediaService extends Service
                 Gson gson = new Gson();
                 mPlaylist = gson.fromJson(json, type);
                 playlistPosition = intent.getExtras().getInt("pos");
-                RecentManagement addToRecent = new RecentManagement(recent);
+                RecentManagement addToRecent = new RecentManagement(db);
                 addToRecent.add(mPlaylist.get(0));
             } else {
                 ListItem li = new ListItem(title, artist, img, mediaFile, year);
                 mPlaylist.add(li);
-                RecentManagement addToRecent = new RecentManagement(recent);
+                RecentManagement addToRecent = new RecentManagement(db);
                 addToRecent.add(li);
 
                 Gson gson = new Gson();
@@ -184,7 +179,6 @@ public class MediaService extends Service
         callStateListener();
         registerBecomingNoisyReceiver();
         register_playNewAudio();
-        createNotificationChannel();
         registerResume();
         registerPause();
         registerNext();
@@ -307,7 +301,7 @@ public class MediaService extends Service
                 writeData();
 
                 ListItem li = new ListItem(title, artist, img, mediaFile, year);
-                RecentManagement addToRecent = new RecentManagement(recent);
+                RecentManagement addToRecent = new RecentManagement(db);
                 addToRecent.add(li);
 
                 sendNewAudioBroadcast();
@@ -332,7 +326,7 @@ public class MediaService extends Service
                 writeData();
 
                 ListItem li = new ListItem(title, artist, img, mediaFile, year);
-                RecentManagement addToRecent = new RecentManagement(recent);
+                RecentManagement addToRecent = new RecentManagement(db);
                 addToRecent.add(li);
 
                 sendNewAudioBroadcast();
@@ -360,7 +354,7 @@ public class MediaService extends Service
                 writeData();
 
                 ListItem li = new ListItem(title, artist, img, mediaFile, year);
-                RecentManagement addToRecent = new RecentManagement(recent);
+                RecentManagement addToRecent = new RecentManagement(db);
                 addToRecent.add(li);
 
                 sendNewAudioBroadcast();
@@ -501,26 +495,6 @@ public class MediaService extends Service
         startForeground(100, mBuilder.build());
     }
 
-    private void createNotificationChannel() {
-        // Create the NotificationChannel, but only on API 26+ because
-        // the NotificationChannel class is new and not in the support library
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            String description = "Matam | Labbaik Ya Hussain";
-            int importance = NotificationManager.IMPORTANCE_MIN;
-            NotificationChannel channel = new
-                    NotificationChannel(getResources().getString(R.string.notification_channel_id),
-                    getResources().getString(R.string.notification_channel_name), importance);
-
-            channel.setDescription(description);
-            channel.setLightColor(Color.GREEN);
-            // Register the channel with the system; you can't change the importance
-            // or other notification behaviors after this
-            NotificationManager notificationManager = getSystemService(NotificationManager.class);
-            assert notificationManager != null;
-            notificationManager.createNotificationChannel(channel);
-        }
-    }
-
     private BroadcastReceiver notificationPlay = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -641,7 +615,7 @@ public class MediaService extends Service
                     Gson gson = new Gson();
                     mPlaylist = gson.fromJson(json, type);
                     playlistPosition = intent.getExtras().getInt("pos");
-                    RecentManagement addToRecent = new RecentManagement(recent);
+                    RecentManagement addToRecent = new RecentManagement(db);
                     addToRecent.add(mPlaylist.get(0));
                 } else {
                     boolean exists = false;
@@ -664,7 +638,7 @@ public class MediaService extends Service
                         ListItem li = new ListItem(title, artist, img, mediaFile, year);
                         mPlaylist.add(li);
 
-                        RecentManagement addToRecent = new RecentManagement(recent);
+                        RecentManagement addToRecent = new RecentManagement(db);
                         addToRecent.add(li);
 
                         Gson gson = new Gson();
@@ -818,7 +792,7 @@ public class MediaService extends Service
             writeData();
 
             ListItem li = new ListItem(title, artist, img, mediaFile, year);
-            RecentManagement addToRecent = new RecentManagement(recent);
+            RecentManagement addToRecent = new RecentManagement(db);
             addToRecent.add(li);
 
             sendNewAudioBroadcast();
@@ -845,7 +819,7 @@ public class MediaService extends Service
             writeData();
 
             ListItem li = new ListItem(title, artist, img, mediaFile, year);
-            RecentManagement addToRecent = new RecentManagement(recent);
+            RecentManagement addToRecent = new RecentManagement(db);
             addToRecent.add(li);
 
             sendNewAudioBroadcast();

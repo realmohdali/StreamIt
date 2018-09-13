@@ -1,7 +1,10 @@
 package it.stream.streamit.tabFragments;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -36,6 +39,8 @@ import it.stream.streamit.adapters.ArtistHomeAdapter;
 import it.stream.streamit.adapters.YearHomeAdapter;
 import it.stream.streamit.dataList.ArtistList;
 import it.stream.streamit.dataList.YearList;
+
+import static it.stream.streamit.download.DownloadService.DOWNLOADING;
 
 public class Home_Tab_Fragment extends Fragment {
 
