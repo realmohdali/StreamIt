@@ -278,6 +278,13 @@ public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToR
                         openPlayStore.setPackage("com.android.vending");
                         startActivity(openPlayStore);
                         return true;
+                    case R.id.share:
+                        mDrawerLayout.closeDrawers();
+                        Intent share = new Intent(Intent.ACTION_SEND);
+                        share.setType("text/plain");
+                        share.putExtra(Intent.EXTRA_TEXT, "https://play.google.com/store/apps/details?id=it.stream.streamit");
+                        startActivity(Intent.createChooser(share, "Share via"));
+                        return true;
                     default:
                         mDrawerLayout.closeDrawers();
                         return true;
@@ -727,6 +734,7 @@ public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToR
 
     @SuppressLint("ClickableViewAccessibility")
     private void loadPlayer() {
+        mSeekBar.setSecondaryProgress(100);
         if (isLoading) {
             ct.setText(trackTitle);
             st.setText(trackSub);
@@ -970,6 +978,12 @@ public class About extends AppCompatActivity implements RemoveQueueItem.SwipeToR
                 Intent intent = new Intent(this, Search.class);
                 startActivity(intent);
                 overridePendingTransition(0, 0);
+                return true;
+            case R.id.share:
+                Intent share = new Intent(Intent.ACTION_SEND);
+                share.setType("text/plain");
+                share.putExtra(Intent.EXTRA_TEXT, "https://play.google.com/store/apps/details?id=it.stream.streamit");
+                startActivity(Intent.createChooser(share, "Share via"));
                 return true;
             case R.id.showQueue:
                 mDrawerLayout.openDrawer(GravityCompat.END);

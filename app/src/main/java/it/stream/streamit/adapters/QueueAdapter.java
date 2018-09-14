@@ -130,7 +130,11 @@ public class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.ViewHolder> 
 
     @Override
     public int getItemCount() {
-        return mList.size();
+        if (mList != null) {
+            return mList.size();
+        } else {
+            return 0;
+        }
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {

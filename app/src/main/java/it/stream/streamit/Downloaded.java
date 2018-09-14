@@ -18,6 +18,7 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
@@ -246,6 +247,12 @@ public class Downloaded extends AppCompatActivity implements RemoveDownloadedIte
                 loadData();
             }
         });
+
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
+        DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(downloadView.getContext(), layoutManager.getOrientation());
+        downloadView.addItemDecoration(dividerItemDecoration);
+        downloadView.setLayoutManager(layoutManager);
+
         loadData();
     }
 
@@ -294,6 +301,13 @@ public class Downloaded extends AppCompatActivity implements RemoveDownloadedIte
                         openPlayStore.setData(Uri.parse("https://play.google.com/store/apps/details?id=it.stream.streamit"));
                         openPlayStore.setPackage("com.android.vending");
                         startActivity(openPlayStore);
+                        return true;
+                    case R.id.share:
+                        mDrawerLayout.closeDrawers();
+                        Intent share = new Intent(Intent.ACTION_SEND);
+                        share.setType("text/plain");
+                        share.putExtra(Intent.EXTRA_TEXT, "https://play.google.com/store/apps/details?id=it.stream.streamit");
+                        startActivity(Intent.createChooser(share, "Share via"));
                         return true;
                     default:
                         mDrawerLayout.closeDrawers();
@@ -522,8 +536,6 @@ public class Downloaded extends AppCompatActivity implements RemoveDownloadedIte
         }
 
         downloadedAdapter = new DownloadedAdapter(this, list, database);
-        LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
-        downloadView.setLayoutManager(layoutManager);
         downloadView.setAdapter(downloadedAdapter);
 
         ItemTouchHelper.SimpleCallback itemTouchHelperCallback = new RemoveDownloadedItem(0, ItemTouchHelper.LEFT, this);
@@ -777,6 +789,7 @@ public class Downloaded extends AppCompatActivity implements RemoveDownloadedIte
 
     @SuppressLint("ClickableViewAccessibility")
     private void loadPlayer() {
+        mSeekBar.setSecondaryProgress(100);
         if (isLoading) {
             ct.setText(trackTitle);
             st.setText(trackSub);
@@ -1021,6 +1034,12 @@ public class Downloaded extends AppCompatActivity implements RemoveDownloadedIte
                 startActivity(intent);
                 overridePendingTransition(0, 0);
                 return true;
+            case R.id.share:
+                Intent share = new Intent(Intent.ACTION_SEND);
+                share.setType("text/plain");
+                share.putExtra(Intent.EXTRA_TEXT, "https://play.google.com/store/apps/details?id=it.stream.streamit");
+                startActivity(Intent.createChooser(share, "Share via"));
+                return true;
             case R.id.showQueue:
                 mDrawerLayout.openDrawer(GravityCompat.END);
                 return true;
@@ -1045,6 +1064,11 @@ public class Downloaded extends AppCompatActivity implements RemoveDownloadedIte
     public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction, int position) {
         if (viewHolder instanceof DownloadedAdapter.ViewHolder) {
             downloadedAdapter.removeItem(viewHolder.getAdapterPosition(), database);
+        }
+        if (viewHolder instanceof QueueAdapter.ViewHolder) {
+            if (viewHolder.getAdapterPosition() != playerPosition) {
+                qAdapter.removeItem(viewHolder.getAdapterPosition());
+            }
         }
     }
 }

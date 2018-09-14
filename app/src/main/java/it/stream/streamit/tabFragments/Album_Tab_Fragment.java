@@ -60,7 +60,7 @@ public class Album_Tab_Fragment extends Fragment {
 
     String url, title, sub, img, json;
 
-    private static final String URL = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showAlbum.php";
+    private static final String URL = "http://reimagintechnology.000webhostapp.com/matam/php_modules/showAlbum.php";
 
     public static final String Broadcast_PLAY_NEW_AUDIO = "it.stream.streamit.PlayNewAudio";
 
@@ -221,7 +221,7 @@ public class Album_Tab_Fragment extends Fragment {
                                 for (int i = 0; i < jsonArray.length(); i++) {
                                     JSONObject jsonObject = jsonArray.getJSONObject(i);
 
-                                    String image = "http://realmohdali.000webhostapp.com/streamIt/";
+                                    String image = "http://reimagintechnology.000webhostapp.com/matam/";
                                     image += jsonObject.getString("image");
                                     String link = jsonObject.getString("url");
                                     String title = jsonObject.getString("title");

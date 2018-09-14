@@ -251,6 +251,9 @@ public class MediaService extends Service
             case AUDIOFOCUS_LOSS:
                 //lost the focus for an unbounded amount of time: stop playback
                 // and release media player
+                if (mediaPlayer == null) {
+                    break;
+                }
                 if (mediaPlayer.isPlaying()) mediaPlayer.stop();
                 mediaPlayer.reset();
                 mediaPlayer = null;
@@ -258,11 +261,17 @@ public class MediaService extends Service
             case AUDIOFOCUS_LOSS_TRANSIENT:
                 //Lost focus for short time but have to stop playback
                 //we don't release the media player because playback is likely to resume
+                if (mediaPlayer == null) {
+                    break;
+                }
                 if (mediaPlayer.isPlaying()) mediaPlayer.pause();
                 break;
             case AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
                 //lost focus for a short time but it's ok to keep playing
                 //at an attenuated level
+                if (mediaPlayer == null) {
+                    break;
+                }
                 if (mediaPlayer.isPlaying()) mediaPlayer.setVolume(0.3f,
                         0.3f);
                 break;
@@ -542,7 +551,7 @@ public class MediaService extends Service
     private Runnable seekUpdate = new Runnable() {
         @Override
         public void run() {
-            if (mediaPlayer.isPlaying()) {
+            if (mediaPlayer != null && mediaPlayer.isPlaying()) {
                 Intent intent = new Intent(SEEK_UPDATE);
                 int currentPosition = mediaPlayer.getCurrentPosition();
                 intent.putExtra("currentPosition", currentPosition);
@@ -720,7 +729,7 @@ public class MediaService extends Service
     }
 
     private void playMedia() {
-        if (!mediaPlayer.isPlaying()) {
+        if (mediaPlayer != null && !mediaPlayer.isPlaying()) {
             mediaPlayer.start();
         }
     }
@@ -734,21 +743,23 @@ public class MediaService extends Service
     }
 
     public void pauseMedia() {
-        if (mediaPlayer.isPlaying()) {
-            Playing_Before_call = false;
-            mediaPlayer.pause();
-            resumePosition = mediaPlayer.getCurrentPosition();
+        if (mediaPlayer != null) {
+            if (mediaPlayer.isPlaying()) {
+                Playing_Before_call = false;
+                mediaPlayer.pause();
+                resumePosition = mediaPlayer.getCurrentPosition();
 
-            showNotification(Status.Paused);
+                showNotification(Status.Paused);
 
-            Intent intent = new Intent(ACTION_PAUSE);
-            sendBroadcast(intent);
+                Intent intent = new Intent(ACTION_PAUSE);
+                sendBroadcast(intent);
 
-            SharedPreferences preferences =
-                    PreferenceManager.getDefaultSharedPreferences(this);
-            SharedPreferences.Editor editor = preferences.edit();
-            editor.putBoolean("playing", false);
-            editor.apply();
+                SharedPreferences preferences =
+                        PreferenceManager.getDefaultSharedPreferences(this);
+                SharedPreferences.Editor editor = preferences.edit();
+                editor.putBoolean("playing", false);
+                editor.apply();
+            }
         }
     }
 
@@ -1057,8 +1068,12 @@ public class MediaService extends Service
                 connection.connect();
                 InputStream input = connection.getInputStream();
                 Bitmap myBitmap = BitmapFactory.decodeStream(input);
-                bitmap = Bitmap.createScaledBitmap(myBitmap, 64, 64,
-                        false);
+                if (myBitmap != null) {
+                    bitmap = Bitmap.createScaledBitmap(myBitmap, 64, 64,
+                            false);
+                } else {
+                    return null;
+                }
                 return myBitmap;
             } catch (IOException e) {
                 return null;

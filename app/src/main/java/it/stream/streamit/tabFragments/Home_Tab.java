@@ -59,7 +59,7 @@ public class Home_Tab extends Fragment {
     private LinearLayout loadingNew;
     private LinearLayout loadingRecent;
 
-    private static final String URL = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showRecent.php";
+    private static final String URL = "http://reimagintechnology.000webhostapp.com/matam/php_modules/showRecent.php";
 
     public void setmActivity(Activity mActivity) {
         this.mActivity = mActivity;
@@ -148,7 +148,7 @@ public class Home_Tab extends Fragment {
                             for (int i = 0; i < jsonArray.length(); i++) {
                                 JSONObject jsonObject = jsonArray.getJSONObject(i);
 
-                                String image = "http://realmohdali.000webhostapp.com/streamIt/";
+                                String image = "http://reimagintechnology.000webhostapp.com/matam/";
                                 image += jsonObject.getString("img");
                                 String artist = jsonObject.getString("artist");
                                 String year = jsonObject.getString("year");

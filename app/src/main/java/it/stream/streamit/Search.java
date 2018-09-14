@@ -312,6 +312,13 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
                         openPlayStore.setPackage("com.android.vending");
                         startActivity(openPlayStore);
                         return true;
+                    case R.id.share:
+                        mDrawerLayout.closeDrawers();
+                        Intent share = new Intent(Intent.ACTION_SEND);
+                        share.setType("text/plain");
+                        share.putExtra(Intent.EXTRA_TEXT, "https://play.google.com/store/apps/details?id=it.stream.streamit");
+                        startActivity(Intent.createChooser(share, "Share via"));
+                        return true;
                     default:
                         mDrawerLayout.closeDrawers();
                         return true;
@@ -829,6 +836,7 @@ public class Search extends AppCompatActivity implements RemoveQueueItem.SwipeTo
 
     @SuppressLint("ClickableViewAccessibility")
     private void loadPlayer() {
+        mSeekBar.setSecondaryProgress(100);
         if (isLoading) {
             ct.setText(trackTitle);
             st.setText(trackSub);

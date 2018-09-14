@@ -1,6 +1,7 @@
 package it.stream.streamit.database;
 
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 
 import java.util.ArrayList;
@@ -13,7 +14,12 @@ public class RecentManagement {
 
     public RecentManagement(SQLiteDatabase database) {
         this.database = database;
-        database.execSQL("CREATE TABLE IF NOT EXISTS recent (_id INTEGER PRIMARY KEY, title VARCHAR, artist VARCHAR, url VARCHAR, image VARCHAR, year VARCHAR)");
+
+        try {
+            database.execSQL("CREATE TABLE IF NOT EXISTS recent (_id INTEGER PRIMARY KEY, title VARCHAR, artist VARCHAR, url VARCHAR, image VARCHAR, year VARCHAR)");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     public void add(ListItem listItem) {

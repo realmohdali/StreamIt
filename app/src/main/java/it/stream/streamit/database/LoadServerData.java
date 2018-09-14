@@ -13,7 +13,7 @@ public class LoadServerData {
     private SQLiteDatabase database;
     private Context context;
 
-    private static final String URL = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showAll.php";
+    private static final String URL = "http://reimagintechnology.000webhostapp.com/matam/php_modules/showAll.php";
     public static final String DATA_LOADED = "it.stream.streamit.database.DATA_LOADED";
 
     public LoadServerData(SQLiteDatabase database, Context context) {
@@ -53,7 +53,7 @@ public class LoadServerData {
                     for (int i = 0; i < jsonArray.length(); i++) {
                         JSONObject jsonObject = jsonArray.getJSONObject(i);
 
-                        String pre = "http://realmohdali.000webhostapp.com/streamIt/";
+                        String pre = "http://reimagintechnology.000webhostapp.com/matam/";
                         String title = jsonObject.getString("title");
                         String artist = jsonObject.getString("artist");
                         String url = jsonObject.getString("url");

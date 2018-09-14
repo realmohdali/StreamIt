@@ -22,7 +22,7 @@
             android:theme="@style/tabTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
+                <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -64,16 +64,6 @@
             android:screenOrientation="nosensor"
             android:theme="@style/tabTheme" />
 
-        <service android:name=".firebaseNotification.Token">
-            <intent-filter>
-                <action android:name="com.google.firebase.INSTANCE_ID_EVENT" />
-            </intent-filter>
-        </service>
-        <service android:name=".firebaseNotification.HandlingMessage">
-            <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
         <service android:name=".download.DownloadService" />
 
         <activity

@@ -28,7 +28,6 @@ import it.stream.streamit.database.ConnectionCheck;
 import it.stream.streamit.dataList.ListItem;
 import it.stream.streamit.R;
 import it.stream.streamit.backgroundService.MediaService;
-import it.stream.streamit.database.FavoriteManagement;
 import it.stream.streamit.download.DownloadManagement;
 import jp.wasabeef.glide.transformations.RoundedCornersTransformation;
 
@@ -63,13 +62,9 @@ public class DownloadedAdapter extends RecyclerView.Adapter<DownloadedAdapter.Vi
 
     @Override
     public void onBindViewHolder(@NonNull final ViewHolder viewHolder, int i) {
-
-        viewHolder.addToFav.setVisibility(View.VISIBLE);
-
         viewHolder.a.setText(mList.get(i).getArtist());
         viewHolder.t.setText(mList.get(i).getTitle());
         viewHolder.y.setText(mList.get(i).getYear());
-
 
         String file_url, image_url, file_title, file_artist, file_year;
         file_url = mList.get(i).getURL();
@@ -99,40 +94,35 @@ public class DownloadedAdapter extends RecyclerView.Adapter<DownloadedAdapter.Vi
         viewHolder.foreground.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (ConnectionCheck.isConnected(mContext)) {
+                readData();
+                int i = viewHolder.getAdapterPosition();
 
-                    readData();
-                    int i = viewHolder.getAdapterPosition();
+                url = mList.get(i).getURL();
+                title = mList.get(i).getTitle();
+                sub = mList.get(i).getArtist();
+                sub += " | ";
+                sub += mList.get(i).getYear();
+                img = mList.get(i).getImageUrl();
+                year = mList.get(i).getYear();
+                artist = mList.get(i).getArtist();
 
-                    url = mList.get(i).getURL();
-                    title = mList.get(i).getTitle();
-                    sub = mList.get(i).getArtist();
-                    sub += " | ";
-                    sub += mList.get(i).getYear();
-                    img = mList.get(i).getImageUrl();
-                    year = mList.get(i).getYear();
-                    artist = mList.get(i).getArtist();
+                writeData();
 
-                    writeData();
+                Gson gson = new Gson();
+                String json = gson.toJson(mList);
 
-                    Gson gson = new Gson();
-                    String json = gson.toJson(mList);
-
-                    if (!serviceRunning) {
-                        Intent intent = new Intent(mContext, MediaService.class);
-                        intent.putExtra("playlist", json);
-                        intent.putExtra("pos", i);
-                        intent.putExtra("isPlayList", true);
-                        mContext.startService(intent);
-                    } else {
-                        Intent intent = new Intent(Broadcast_PLAY_NEW_AUDIO);
-                        intent.putExtra("playlist", json);
-                        intent.putExtra("pos", i);
-                        intent.putExtra("isPlayList", true);
-                        mContext.sendBroadcast(intent);
-                    }
+                if (!serviceRunning) {
+                    Intent intent = new Intent(mContext, MediaService.class);
+                    intent.putExtra("playlist", json);
+                    intent.putExtra("pos", i);
+                    intent.putExtra("isPlayList", true);
+                    mContext.startService(intent);
                 } else {
-                    Toast.makeText(mContext, "You are not connected to Internet", Toast.LENGTH_SHORT).show();
+                    Intent intent = new Intent(Broadcast_PLAY_NEW_AUDIO);
+                    intent.putExtra("playlist", json);
+                    intent.putExtra("pos", i);
+                    intent.putExtra("isPlayList", true);
+                    mContext.sendBroadcast(intent);
                 }
             }
         });
@@ -168,54 +158,6 @@ public class DownloadedAdapter extends RecyclerView.Adapter<DownloadedAdapter.Vi
             }
         });
 
-        viewHolder.addToFav.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                boolean isFav = isFav(mList.get(viewHolder.getAdapterPosition()).getURL());
-
-                int i = viewHolder.getAdapterPosition();
-                url = mList.get(i).getURL();
-                title = mList.get(i).getTitle();
-                sub = mList.get(i).getArtist();
-                sub += " | ";
-                sub += mList.get(i).getYear();
-                img = mList.get(i).getImageUrl();
-                year = mList.get(i).getYear();
-                artist = mList.get(i).getArtist();
-                if (isFav) {
-                    FavoriteManagement favoriteManagement = new FavoriteManagement(title, url, img, artist, year, database, mContext);
-                    switch (favoriteManagement.removeFav()) {
-                        case FavoriteManagement.SUCCESS:
-                            viewHolder.addToFav.setImageResource(R.drawable.ic_favorite_border_white_24dp);
-                            Toast.makeText(mContext, "Removed from favorite", Toast.LENGTH_SHORT).show();
-                            break;
-                        case FavoriteManagement.ALREADY_EXISTS_OR_REMOVED:
-                            viewHolder.addToFav.setImageResource(R.drawable.ic_favorite_border_white_24dp);
-                            Toast.makeText(mContext, "This track does not exist in favorite", Toast.LENGTH_SHORT).show();
-                            break;
-                        case FavoriteManagement.ERROR:
-                            Toast.makeText(mContext, "Error in removing from favorite", Toast.LENGTH_SHORT).show();
-                            break;
-                    }
-                } else {
-                    FavoriteManagement favoriteManagement = new FavoriteManagement(title, url, img, artist, year, database, mContext);
-                    switch (favoriteManagement.addFav()) {
-                        case FavoriteManagement.SUCCESS:
-                            viewHolder.addToFav.setImageResource(R.drawable.ic_favorite_green_24dp);
-                            Toast.makeText(mContext, "Added to favorite", Toast.LENGTH_SHORT).show();
-                            break;
-                        case FavoriteManagement.ALREADY_EXISTS_OR_REMOVED:
-                            viewHolder.addToFav.setImageResource(R.drawable.ic_favorite_green_24dp);
-                            Toast.makeText(mContext, "This track is already exist in favorite", Toast.LENGTH_SHORT).show();
-                            break;
-                        case FavoriteManagement.ERROR:
-                            Toast.makeText(mContext, "Error in adding to favorite", Toast.LENGTH_SHORT).show();
-                            break;
-                    }
-                }
-            }
-        });
-
 
     }
 
@@ -228,7 +170,7 @@ public class DownloadedAdapter extends RecyclerView.Adapter<DownloadedAdapter.Vi
         public LinearLayout foreground;
         ImageView iv;
         TextView t, a, y, bt;
-        ImageButton addToQ, addToFav;
+        ImageButton addToQ;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -239,7 +181,6 @@ public class DownloadedAdapter extends RecyclerView.Adapter<DownloadedAdapter.Vi
             foreground = itemView.findViewById(R.id.foreground);
             bt = itemView.findViewById(R.id.backText);
             addToQ = itemView.findViewById(R.id.addToQueue);
-            addToFav = itemView.findViewById(R.id.addToFav);
         }
     }
 
@@ -300,10 +241,5 @@ public class DownloadedAdapter extends RecyclerView.Adapter<DownloadedAdapter.Vi
     private void readData() {
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
         serviceRunning = sp.getBoolean("serviceRunning", false);
-    }
-
-    private boolean isFav(String url) {
-        FavoriteManagement favoriteManagement = new FavoriteManagement(url, database);
-        return favoriteManagement.alreadyExists();
     }
 }

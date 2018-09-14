@@ -333,7 +333,7 @@ public class ArtistInYear extends AppCompatActivity implements RemoveQueueItem.S
         tabLayout.setVisibility(View.GONE);
         mViewPagerControl.setVisibility(View.GONE);
         mRelativeLayout.setVisibility(View.VISIBLE);
-        String URL = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showArtistInYear.php";
+        String URL = "http://reimagintechnology.000webhostapp.com/matam/php_modules/showArtistInYear.php";
         StringRequest stringRequest = new StringRequest(Request.Method.POST,
                 URL,
                 new Response.Listener<String>() {
@@ -349,7 +349,7 @@ public class ArtistInYear extends AppCompatActivity implements RemoveQueueItem.S
                                 JSONObject jsonObject = jsonArray.getJSONObject(i);
 
                                 String artist = jsonObject.getString("artist");
-                                String image = "http://realmohdali.000webhostapp.com/streamIt/";
+                                String image = "http://reimagintechnology.000webhostapp.com/matam/";
                                 image += jsonObject.getString("image");
 
                                 ArtistInYearList li = new ArtistInYearList(artist, image);
@@ -422,6 +422,13 @@ public class ArtistInYear extends AppCompatActivity implements RemoveQueueItem.S
                         openPlayStore.setData(Uri.parse("https://play.google.com/store/apps/details?id=it.stream.streamit"));
                         openPlayStore.setPackage("com.android.vending");
                         startActivity(openPlayStore);
+                        return true;
+                    case R.id.share:
+                        mDrawerLayout.closeDrawers();
+                        Intent share = new Intent(Intent.ACTION_SEND);
+                        share.setType("text/plain");
+                        share.putExtra(Intent.EXTRA_TEXT, "https://play.google.com/store/apps/details?id=it.stream.streamit");
+                        startActivity(Intent.createChooser(share, "Share via"));
                         return true;
                     default:
                         mDrawerLayout.closeDrawers();
@@ -874,6 +881,7 @@ public class ArtistInYear extends AppCompatActivity implements RemoveQueueItem.S
 
     @SuppressLint("ClickableViewAccessibility")
     private void loadPlayer() {
+        mSeekBar.setSecondaryProgress(100);
         if (isLoading) {
             ct.setText(trackTitle);
             st.setText(trackSub);
@@ -1117,6 +1125,12 @@ public class ArtistInYear extends AppCompatActivity implements RemoveQueueItem.S
                 Intent intent = new Intent(this, Search.class);
                 startActivity(intent);
                 overridePendingTransition(0, 0);
+                return true;
+            case R.id.share:
+                Intent share = new Intent(Intent.ACTION_SEND);
+                share.setType("text/plain");
+                share.putExtra(Intent.EXTRA_TEXT, "https://play.google.com/store/apps/details?id=it.stream.streamit");
+                startActivity(Intent.createChooser(share, "Share via"));
                 return true;
             case R.id.showQueue:
                 mDrawerLayout.openDrawer(GravityCompat.END);

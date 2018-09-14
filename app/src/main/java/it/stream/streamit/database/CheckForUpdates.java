@@ -18,7 +18,7 @@ import org.json.JSONObject;
 
 public class CheckForUpdates {
 
-    private static final String URL = "http://realmohdali.000webhostapp.com/streamIt/php_modules/update.php";
+    private static final String URL = "http://reimagintechnology.000webhostapp.com/matam/php_modules/update.php";
     private String value;
 
     public boolean getUpdate(Context context) {

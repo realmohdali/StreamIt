@@ -100,11 +100,7 @@ public class FavoriteManagement {
     public boolean alreadyExists() {
         cursor = database.rawQuery("SELECT * FROM fav WHERE URL = '" + url + "'", null);
         cursor.moveToFirst();
-        if (cursor.getCount() > 0) {
-            return true;
-        } else {
-            return false;
-        }
+        return cursor.getCount() > 0;
     }
 
     public List<ListItem> showFavList() {

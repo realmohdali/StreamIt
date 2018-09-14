@@ -27,5 +27,9 @@
             android:id="@+id/feedback"
             android:icon="@drawable/ic_feedback"
             android:title="@string/feedback" />
+        <item
+            android:id="@+id/share"
+            android:icon="@drawable/ic_share"
+            android:title="@string/share" />
     </group>
 </menu>

@@ -47,7 +47,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
-import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -153,8 +152,6 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
         createNotificationChannel();
 
         clearData();
-
-        FirebaseMessaging.getInstance().subscribeToTopic("all");
 
         registerSearchDataLoaded();
 
@@ -376,6 +373,13 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
                         openPlayStore.setData(Uri.parse("https://play.google.com/store/apps/details?id=it.stream.streamit"));
                         openPlayStore.setPackage("com.android.vending");
                         startActivity(openPlayStore);
+                        return true;
+                    case R.id.share:
+                        mDrawerLayout.closeDrawers();
+                        Intent share = new Intent(Intent.ACTION_SEND);
+                        share.setType("text/plain");
+                        share.putExtra(Intent.EXTRA_TEXT, "https://play.google.com/store/apps/details?id=it.stream.streamit");
+                        startActivity(Intent.createChooser(share, "Share via"));
                         return true;
                     default:
                         mDrawerLayout.closeDrawers();
@@ -846,6 +850,7 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
 
     @SuppressLint("ClickableViewAccessibility")
     private void loadPlayer() {
+        mSeekBar.setSecondaryProgress(100);
         if (isLoading) {
             ct.setText(trackTitle);
             st.setText(trackSub);
@@ -1120,6 +1125,12 @@ public class MainActivity extends AppCompatActivity implements RemoveQueueItem.S
                 } else {
                     Toast.makeText(this, R.string.offline, Toast.LENGTH_SHORT).show();
                 }
+                return true;
+            case R.id.share:
+                Intent share = new Intent(Intent.ACTION_SEND);
+                share.setType("text/plain");
+                share.putExtra(Intent.EXTRA_TEXT, "https://play.google.com/store/apps/details?id=it.stream.streamit");
+                startActivity(Intent.createChooser(share, "Share via"));
                 return true;
             case R.id.showQueue:
                 mDrawerLayout.openDrawer(GravityCompat.END);

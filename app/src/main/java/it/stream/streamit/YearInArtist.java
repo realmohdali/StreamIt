@@ -89,7 +89,7 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
     private String trackUrl;
     private SQLiteDatabase db;
 
-    private static final String URL = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showYearInArtist.php";
+    private static final String URL = "http://reimagintechnology.000webhostapp.com/matam/php_modules/showYearInArtist.php";
     private List<YearInArtistList> mList;
 
     private String artist, image;
@@ -405,6 +405,13 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
                         openPlayStore.setData(Uri.parse("https://play.google.com/store/apps/details?id=it.stream.streamit"));
                         openPlayStore.setPackage("com.android.vending");
                         startActivity(openPlayStore);
+                        return true;
+                    case R.id.share:
+                        mDrawerLayout.closeDrawers();
+                        Intent share = new Intent(Intent.ACTION_SEND);
+                        share.setType("text/plain");
+                        share.putExtra(Intent.EXTRA_TEXT, "https://play.google.com/store/apps/details?id=it.stream.streamit");
+                        startActivity(Intent.createChooser(share, "Share via"));
                         return true;
                     default:
                         mDrawerLayout.closeDrawers();
@@ -858,6 +865,7 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
 
     @SuppressLint("ClickableViewAccessibility")
     private void loadPlayer() {
+        mSeekBar.setSecondaryProgress(100);
         if (isLoading) {
             ct.setText(trackTitle);
             st.setText(trackSub);
@@ -1100,6 +1108,12 @@ public class YearInArtist extends AppCompatActivity implements RemoveQueueItem.S
                 Intent intent = new Intent(this, Search.class);
                 startActivity(intent);
                 overridePendingTransition(0, 0);
+                return true;
+            case R.id.share:
+                Intent share = new Intent(Intent.ACTION_SEND);
+                share.setType("text/plain");
+                share.putExtra(Intent.EXTRA_TEXT, "https://play.google.com/store/apps/details?id=it.stream.streamit");
+                startActivity(Intent.createChooser(share, "Share via"));
                 return true;
             case R.id.showQueue:
                 mDrawerLayout.openDrawer(GravityCompat.END);

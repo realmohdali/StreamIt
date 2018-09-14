@@ -1,7 +1,6 @@
 package it.stream.streamit.adapters;
 
 import android.app.AlertDialog;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -238,6 +237,8 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> 
                             builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialogInterface, int i) {
+                                    viewHolder.loading.setVisibility(View.GONE);
+                                    viewHolder.down.setVisibility(View.VISIBLE);
                                     dialogInterface.dismiss();
                                 }
                             });

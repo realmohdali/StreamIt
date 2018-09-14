@@ -60,8 +60,8 @@ public class Home_Tab_Fragment extends Fragment {
     private List<YearList> mYearList;
 
     //URLs
-    private static final String URL2 = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showArtist.php";
-    private static final String URL3 = "http://realmohdali.000webhostapp.com/streamIt/php_modules/showYear.php";
+    private static final String URL2 = "http://reimagintechnology.000webhostapp.com/matam/php_modules/showArtist.php";
+    private static final String URL3 = "http://reimagintechnology.000webhostapp.com/matam/php_modules/showYear.php";
 
     public void setPosition(int position) {
         this.position = position;
@@ -130,7 +130,7 @@ public class Home_Tab_Fragment extends Fragment {
                             for (int i = 0; i < jsonArray.length(); i++) {
                                 JSONObject jsonObject = jsonArray.getJSONObject(i);
 
-                                String image = "http://realmohdali.000webhostapp.com/streamIt/";
+                                String image = "http://reimagintechnology.000webhostapp.com/matam/";
                                 image += jsonObject.getString("image");
                                 String artist = jsonObject.getString("artist");
                                 String nationality = jsonObject.getString("nationality");
@@ -149,7 +149,6 @@ public class Home_Tab_Fragment extends Fragment {
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
-
                     }
                 },
                 new Response.ErrorListener() {
@@ -183,7 +182,7 @@ public class Home_Tab_Fragment extends Fragment {
                                 JSONObject jsonObject = jsonArray.getJSONObject(i);
 
                                 String year = jsonObject.getString("year");
-                                String image = "http://realmohdali.000webhostapp.com/streamIt/";
+                                String image = "http://reimagintechnology.000webhostapp.com/matam/";
                                 image += jsonObject.getString("image");
 
                                 YearList li = new YearList(year, image);
