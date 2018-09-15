@@ -181,76 +181,91 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> 
         viewHolder.down.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(final View view) {
-                class GetSize extends AsyncTask<Void, Void, Void> {
+                if (downloading()) {
+                    Toast.makeText(mContext, "A Download is already in progress", Toast.LENGTH_SHORT).show();
+                } else if (gettingSize()) {
+                    Toast.makeText(mContext, "Fetching size of another file", Toast.LENGTH_SHORT).show();
+                } else {
+                    class GetSize extends AsyncTask<Void, Void, Void> {
 
-                    @Override
-                    protected void onPreExecute() {
-                        super.onPreExecute();
-                        viewHolder.down.setVisibility(View.GONE);
-                        viewHolder.loading.setVisibility(View.VISIBLE);
-                    }
-
-                    @Override
-                    protected Void doInBackground(Void... voids) {
-                        try {
-                            URL url = new URL(file_url);
-                            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-
-                            fileSize = connection.getContentLength();
-
-                            connection.disconnect();
-
-                        } catch (Exception e) {
-                            e.printStackTrace();
+                        @Override
+                        protected void onPreExecute() {
+                            super.onPreExecute();
+                            viewHolder.down.setVisibility(View.GONE);
+                            viewHolder.loading.setVisibility(View.VISIBLE);
+                            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(mContext);
+                            SharedPreferences.Editor editor = preferences.edit();
+                            editor.putBoolean("gettingSize", true);
+                            editor.apply();
                         }
-                        return null;
-                    }
 
-                    @Override
-                    protected void onPostExecute(Void aVoid) {
-                        super.onPostExecute(aVoid);
+                        @Override
+                        protected Void doInBackground(Void... voids) {
+                            try {
+                                URL url = new URL(file_url);
+                                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
-                        int i = viewHolder.getAdapterPosition();
+                                fileSize = connection.getContentLength();
 
-                        if (fileSize > 0) {
-                            float mbSize = fileSize / (1024 * 1024);
-                            String fileSizeMB = String.valueOf(mbSize) + " MB";
+                                connection.disconnect();
 
-                            AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
-                            builder.setTitle("Download");
-                            builder.setMessage("File : " + mList.get(i).getTitle() + " | Size : " + fileSizeMB);
-                            builder.setPositiveButton("Download", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialogInterface, int i) {
-                                    int j = viewHolder.getAdapterPosition();
-                                    String file_url, image_url, file_title, file_artist, file_year;
-                                    file_url = mList.get(j).getURL();
-                                    image_url = mList.get(j).getImageUrl();
-                                    file_title = mList.get(j).getTitle();
-                                    file_artist = mList.get(j).getArtist();
-                                    file_year = mList.get(j).getYear();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            return null;
+                        }
 
-                                    downloadManagement = new DownloadManagement(file_url, database, mContext, (file_title + ".mp3"), file_title, image_url, file_artist, file_year);
-                                    downloadManagement.initDownload();
-                                }
-                            });
-                            builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialogInterface, int i) {
-                                    viewHolder.loading.setVisibility(View.GONE);
-                                    viewHolder.down.setVisibility(View.VISIBLE);
-                                    dialogInterface.dismiss();
-                                }
-                            });
-                            builder.setCancelable(false);
+                        @Override
+                        protected void onPostExecute(Void aVoid) {
+                            super.onPostExecute(aVoid);
 
-                            builder.show();
+                            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(mContext);
+                            SharedPreferences.Editor editor = preferences.edit();
+                            editor.putBoolean("gettingSize", false);
+                            editor.apply();
+
+                            int i = viewHolder.getAdapterPosition();
+
+                            if (fileSize > 0) {
+                                float mbSize = fileSize / (1024 * 1024);
+                                String fileSizeMB = String.valueOf(mbSize) + " MB";
+
+                                AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
+                                builder.setTitle("Download");
+                                builder.setMessage("File : " + mList.get(i).getTitle() + " | Size : " + fileSizeMB);
+                                builder.setPositiveButton("Download", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialogInterface, int i) {
+                                        int j = viewHolder.getAdapterPosition();
+                                        String file_url, image_url, file_title, file_artist, file_year;
+                                        file_url = mList.get(j).getURL();
+                                        image_url = mList.get(j).getImageUrl();
+                                        file_title = mList.get(j).getTitle();
+                                        file_artist = mList.get(j).getArtist();
+                                        file_year = mList.get(j).getYear();
+
+                                        downloadManagement = new DownloadManagement(file_url, database, mContext, (file_title + ".mp3"), file_title, image_url, file_artist, file_year);
+                                        downloadManagement.initDownload();
+                                    }
+                                });
+                                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialogInterface, int i) {
+                                        viewHolder.loading.setVisibility(View.GONE);
+                                        viewHolder.down.setVisibility(View.VISIBLE);
+                                        dialogInterface.dismiss();
+                                    }
+                                });
+                                builder.setCancelable(false);
+
+                                builder.show();
+                            }
                         }
                     }
+
+                    GetSize getSize = new GetSize();
+                    getSize.execute();
                 }
-
-                GetSize getSize = new GetSize();
-                getSize.execute();
             }
         });
 
@@ -357,5 +372,15 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder> 
     private boolean isFav(String url) {
         FavoriteManagement favoriteManagement = new FavoriteManagement(url, database);
         return favoriteManagement.alreadyExists();
+    }
+
+    private boolean downloading() {
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
+        return sp.getBoolean("downloadingService", false);
+    }
+
+    private boolean gettingSize() {
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
+        return sp.getBoolean("gettingSize", false);
     }
 }

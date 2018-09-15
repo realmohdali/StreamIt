@@ -6,10 +6,12 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
@@ -48,10 +50,19 @@ public class DownloadService extends Service {
     private NotificationManagerCompat notificationManagerCompat;
     private PendingIntent downloadComplete;
 
+    private SharedPreferences.Editor editor;
+
+
     @Override
     public void onCreate() {
         super.onCreate();
         registerCancelDownload();
+
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+        editor = sp.edit();
+        editor.putBoolean("downloadingService", true);
+        editor.apply();
+
     }
 
     @Override
@@ -82,7 +93,7 @@ public class DownloadService extends Service {
         Intent downloaded = new Intent(this, Downloaded.class);
         downloadComplete = PendingIntent.getActivity(this, 0, downloaded, 0);
 
-        builder = new NotificationCompat.Builder(this, channel_id);
+        builder = new NotificationCompat.Builder(getApplicationContext(), channel_id);
         builder.setPriority(NotificationCompat.PRIORITY_MAX)
                 .setSmallIcon(R.drawable.ic_file_download)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -92,7 +103,7 @@ public class DownloadService extends Service {
                 .addAction(R.drawable.ic_clear, "Cancel", pendingIntent)
                 .setProgress(100, 0, false);
 
-        notificationManagerCompat = NotificationManagerCompat.from(this);
+        notificationManagerCompat = NotificationManagerCompat.from(getApplicationContext());
         notificationManagerCompat.notify(notification_id, builder.build());
     }
 
@@ -132,9 +143,10 @@ public class DownloadService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        editor.putBoolean("downloadingService", false);
+        editor.apply();
+
         unregisterReceiver(cancelDownload);
-        NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(getApplicationContext());
-        notificationManagerCompat.cancel(notification_id);
     }
 
     @Nullable
@@ -245,6 +257,7 @@ public class DownloadService extends Service {
                         .setAutoCancel(true)
                         .mActions.clear();
                 notificationManagerCompat.notify(notification_id, builder.build());
+
                 try {
                     database.execSQL("INSERT INTO downloads (file, file_url, title, img, artist, year, size) VALUES ('" + fileName + "','" + file_url + "','" + title + "','" + img + "','" + artist + "','" + year + "','" + file_length + "')");
                 } catch (SQLException e) {

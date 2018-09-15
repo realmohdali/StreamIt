@@ -293,9 +293,8 @@ public class ArtistInYear extends AppCompatActivity implements RemoveQueueItem.S
         toolbarImage.setVisibility(View.VISIBLE);
 
         final ViewPager viewPager = findViewById(R.id.pager);
-        SQLiteDatabase database = openOrCreateDatabase("favoirte", MODE_PRIVATE, null);
 
-        final YearPagerAdapter pagerAdapter = new YearPagerAdapter(getSupportFragmentManager(), tabLayout.getTabCount(), this, mList, y, database);
+        final YearPagerAdapter pagerAdapter = new YearPagerAdapter(getSupportFragmentManager(), tabLayout.getTabCount(), this, mList, y, db);
 
         viewPager.setAdapter(pagerAdapter);
 

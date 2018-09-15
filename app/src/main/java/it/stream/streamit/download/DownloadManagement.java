@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.widget.Toast;
 
 import java.io.File;
@@ -35,8 +36,11 @@ public class DownloadManagement {
         this.year = year;
 
         list = new ArrayList<>();
-
-        database.execSQL("CREATE TABLE IF NOT EXISTS downloads (_id INTEGER PRIMARY KEY AUTOINCREMENT, file VARCHAR, file_url VARCHAR, title VARCHAR, img VARCHAR, artist VARCHAR, year VARCHAR, size INTEGER)");
+        try {
+            database.execSQL("CREATE TABLE IF NOT EXISTS downloads (_id INTEGER PRIMARY KEY AUTOINCREMENT, file VARCHAR, file_url VARCHAR, title VARCHAR, img VARCHAR, artist VARCHAR, year VARCHAR, size INTEGER)");
+        } catch (SQLiteException e) {
+            e.printStackTrace();
+        }
     }
 
     public DownloadManagement(SQLiteDatabase database) {
@@ -82,10 +86,9 @@ public class DownloadManagement {
         if (fileDeleted) {
             String absolutePath = file.getAbsolutePath();
             try {
-                database.execSQL("DELETE FROM downloads WHERE file_url = '" + file_url + "'");
+                database.execSQL("DELETE FROM downloads WHERE file = '" + file_name + "'");
                 database.execSQL("UPDATE fav SET url = '" + file_url + "' WHERE url = '" + absolutePath + "'");
                 database.execSQL("UPDATE recent SET url = '" + file_url + "' WHERE url = '" + absolutePath + "'");
-                database.close();
             } catch (SQLException e) {
                 e.printStackTrace();
             }
